@@ -10,7 +10,7 @@ async function main() {
   
     console.log("Account balance:", (await deployer.getBalance()).toString());
   
-    const Token = await ethers.getContractFactory("MisBlock");
+    const Token = await ethers.getContractFactory("MisBlockETH");
     const token = await Token.deploy();
     await token.deployed();
   
