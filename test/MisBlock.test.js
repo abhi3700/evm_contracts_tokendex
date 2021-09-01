@@ -26,7 +26,7 @@ describe("MisBlock contract", function() {
     describe("Deployment", function () {
         it("Should assign the total supply of tokens to the owner and it should be 1T", async function () {
             const ownerBalance = await hardhatToken.balanceOf(owner.address);
-            expect(await hardhatToken.totalSupply()).to.equal(ownerBalance).to.equal(1000000000000);
+            expect(await hardhatToken.totalSupply()).to.equal(ownerBalance).to.equal(ethers.BigNumber.from('10').pow(await hardhatToken.decimals()).mul(1000000000000));
         });
     }); 
     
@@ -80,7 +80,7 @@ describe("MisBlock contract", function() {
           const finalOwnerBalance = await hardhatToken.balanceOf(
             owner.address
           );
-          expect(finalOwnerBalance).to.equal(initialOwnerBalance - 150);
+          expect(finalOwnerBalance).to.equal(initialOwnerBalance.sub(150));
     
           const addr1Balance = await hardhatToken.balanceOf(
             addr1.address
