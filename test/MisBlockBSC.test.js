@@ -1,6 +1,6 @@
 const { expect } = require("chai");
 
-describe("MisBlockBase contract", function() {
+describe("MisBlockBSC contract", function() {
     let Token;
     let hardhatToken;
     let owner;
@@ -10,7 +10,7 @@ describe("MisBlockBase contract", function() {
 
     beforeEach(async function () {
         // Get the ContractFactory and Signers here.
-        Token = await ethers.getContractFactory("MisBlockBase");
+        Token = await ethers.getContractFactory("MisBlockBSC");
         [owner, addr1, addr2, ...addrs] = await ethers.getSigners();
     
         // To deploy our contract, we just have to call Token.deploy() and await
