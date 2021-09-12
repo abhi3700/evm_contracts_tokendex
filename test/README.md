@@ -16,3 +16,4 @@ All the test functions illustrated below is done locally.
 * "Burning tokens successfully"
 * "Reverts when tokens not held with `owner` is burned"
 * "`owner` successfully distributes tokens as per the percentage to the `vestingC`"
+* "Reverts when `owner` doesn't distribute tokens as per the percentage to the `vestingC`"
