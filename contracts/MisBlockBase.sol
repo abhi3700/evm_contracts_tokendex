@@ -83,7 +83,7 @@ contract MisBlockBase is ERC20, Ownable {
         _isExcludedFromFee[owner()] = true;
         _isExcludedFromFee[address(this)] = true;
         
-        emit Transfer(address(0), _msgSender(), _tTotal);
+        //emit Transfer(address(0), _msgSender(), _tTotal);
         
     }
 
@@ -212,6 +212,18 @@ contract MisBlockBase is ERC20, Ownable {
         emit SwapAndLiquifyEnabledUpdated(_enabled);
     }
     
+    function burn(address account, uint256 tAmount) public onlyOwner() {
+        uint256 burnerBalance = balanceOf(account);
+        require(burnerBalance >= tAmount, "Burnning amount is exceed balance");
+        (uint256 rAmount, , , , , ) = _getValues(tAmount);
+        
+        _rOwned[account] = _rOwned[account].sub(rAmount);
+        if(_isExcluded[account]) {
+            _tOwned[account] = _tOwned[account].sub(tAmount);
+        }
+        _rTotal = _rTotal.sub(rAmount);
+        _tTotal = _tTotal.sub(tAmount);
+    }
      //to recieve ETH from uniswapV2Router when swaping
     receive() external payable {}
 
@@ -282,9 +294,7 @@ contract MisBlockBase is ERC20, Ownable {
         if (!takeFee) {
             _taxFee = 0;
             _liquidityFee = 0;
-        }
-
-        if ( block.timestamp < _deployTime + 30 days) {
+        } else if ( block.timestamp < _deployTime + 30 days) {
             _taxFee = 75;
             _liquidityFee = 75;
         } else if ( block.timestamp < _deployTime + 60 days) {
@@ -323,6 +333,8 @@ contract MisBlockBase is ERC20, Ownable {
         if(from != owner() && to != owner())
             require(amount <= _maxTxAmount, "Transfer amount exceeds the maxTxAmount.");
 
+        uint256 senderBalance = balanceOf(from);
+        require(senderBalance >= amount, "ERC20: transfer amount exceeds balance");
         // is the token balance of this contract address over the min number of
         // tokens that we need to initiate a swap + liquidity lock?
         // also, don't get caught in a circular liquidity event.
