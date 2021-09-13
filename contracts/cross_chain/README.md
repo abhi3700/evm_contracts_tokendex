@@ -1,0 +1,1 @@
+Please, find the documentation [here](https://github.com/UnicoinOfficial/token-contract/wiki/Cross-chain-Communication)
