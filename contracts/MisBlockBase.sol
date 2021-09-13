@@ -111,6 +111,7 @@ contract MisBlockBase is ERC20, Ownable {
     }
 
     function transferFrom(address sender, address recipient, uint256 amount) public override returns (bool) {
+        require(sender != recipient, "sender and recipient is same address");
         _transferBase(sender, recipient, amount);
         _approveBase(sender, _msgSender(), _allowances[sender][_msgSender()].sub(amount, "ERC20: transfer amount exceeds allowance"));
         return true;
@@ -367,7 +368,7 @@ contract MisBlockBase is ERC20, Ownable {
         }
         
         //it will check timelock
-        _beforeTokenTransferBase(from, to, amount);
+        _beforeTokenTransferBase(from, amount);
         
         //transfer amount, it will take tax, burn, liquidity fee
         _tokenTransfer(from,to,amount,takeFee);
@@ -502,7 +503,6 @@ contract MisBlockBase is ERC20, Ownable {
 
     function _beforeTokenTransferBase(
         address from,
-        address to,
         uint256 amount
     ) private {
         LockFund[] storage lockFunds = _lockFundsArray[from];

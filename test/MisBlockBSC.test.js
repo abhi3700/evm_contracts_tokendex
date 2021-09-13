@@ -311,4 +311,63 @@ describe("MisBlockBSC contract", function() {
         ).to.be.revertedWith("Burnning amount is exceed balance");        
       });
     });
+
+    describe("Delegate Transfer", function () {
+      it("Should delegate transfer successfully", async function () {
+        // exclude from fee and reward.
+        await hardhatToken.excludeFromFee(addr1.address);
+        await hardhatToken.excludeFromReward(addr1.address);
+        await hardhatToken.excludeFromReward(addr3.address);
+        
+        // send 100 token to addr1 from owner
+        await hardhatToken.transfer(addr1.address, convertTokenValue(100));
+        
+        // approve addr2 to send 50 token
+        await hardhatToken.connect(addr1).approve(addr2.address, convertTokenValue(50));
+
+        // delegate transfer from addr1 to addr3 by addr2
+        await hardhatToken.connect(addr2).transferFrom(addr1.address, addr3.address, convertTokenValue(50));
+        expect(await hardhatToken.balanceOf(
+          addr1.address
+        )).to.be.equal(convertTokenValue(50));
+        expect(await hardhatToken.balanceOf(
+          addr3.address
+        )).to.be.equal(convertTokenValue(50));
+      });
+
+      it("Should revert when delegate transfer exceed balance", async function () {
+        // exclude from fee and reward.
+        await hardhatToken.excludeFromFee(addr1.address);
+        await hardhatToken.excludeFromReward(addr1.address);
+        await hardhatToken.excludeFromReward(addr3.address);
+        
+        // send 100 token to addr1 from owner
+        await hardhatToken.transfer(addr1.address, convertTokenValue(50));
+        
+        // approve addr2 to send 50 token
+        await hardhatToken.connect(addr1).approve(addr2.address, convertTokenValue(100));
+
+        // delegate transfer from addr1 to addr3 by addr2 should be reverted
+        await expect(
+          hardhatToken.connect(addr2).transferFrom(addr1.address, addr3.address, convertTokenValue(100)
+        )).to.be.revertedWith("transfer amount exceeds balance");
+      });
+
+      it("Should revert when delegate transfer between same addresses", async function () {
+        // exclude from fee and reward.
+        await hardhatToken.excludeFromFee(addr1.address);
+        await hardhatToken.excludeFromReward(addr1.address);
+        
+        // send 100 token to addr1 from owner
+        await hardhatToken.transfer(addr1.address, convertTokenValue(100));
+        
+        // approve addr2 to send 50 token
+        await hardhatToken.connect(addr1).approve(addr2.address, convertTokenValue(50));
+
+        // delegate transfer from addr1 to addr3 by addr2 should be reverted
+        await expect(
+          hardhatToken.connect(addr2).transferFrom(addr1.address, addr1.address, convertTokenValue(50)
+        )).to.be.revertedWith("sender and recipient is same address");
+      });
+    });
 });
