@@ -13,9 +13,22 @@ describe("MisBlockETH contract", function() {
     let addr3;
     let addr4;
     let vestingC;
-
-    beforeEach(async function () {
-        this.timeout(30000);
+    
+    beforeEach(async function () {        
+        this.timeout(50000);
+        // const INFURA_API_KEY = process.env.INFURA_API_KEY || "";
+      
+        // await network.provider.request({
+        //   method: "hardhat_reset",
+        //   params: [
+        //     {
+        //       forking: {
+        //         jsonRpcUrl: `https://mainnet.infura.io/v3/${INFURA_API_KEY}`,
+        //       },
+        //     },
+        //   ],
+        // });
+        
         // Get the ContractFactory and Signers here.
         Token = await ethers.getContractFactory("MisBlockETH");
         [owner, addr1, addr2, addr3, addr4, vestingC] = await ethers.getSigners();

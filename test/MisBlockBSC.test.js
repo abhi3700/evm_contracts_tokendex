@@ -13,9 +13,21 @@ describe("MisBlockBSC contract", function() {
     let addr3;
     let addr4;
     let vestingC;
-
     beforeEach(async function () {
-        this.timeout(30000);
+        this.timeout(50000);
+        // const SPEEDY_NODE_KEY = process.env.SPEEDY_NODE_KEY || "";
+        // console.log(SPEEDY_NODE_KEY);
+        // await network.provider.request({
+        //   method: "hardhat_reset",
+        //   params: [
+        //     {
+        //       forking: {
+        //         jsonRpcUrl: `https://speedy-nodes-nyc.moralis.io/${SPEEDY_NODE_KEY}/bsc/mainnet/archive`,
+        //       },
+        //     },
+        //   ],
+        // });
+    
         // Get the ContractFactory and Signers here.
         Token = await ethers.getContractFactory("MisBlockBSC");
         [owner, addr1, addr2, addr3, addr4, vestingC] = await ethers.getSigners();
@@ -33,7 +45,7 @@ describe("MisBlockBSC contract", function() {
           expect(await hardhatToken.totalSupply()).to.equal(ownerBalance).to.equal(convertTokenValue(1000000000000));
         });
         it("Should push 2 addresses of uniswap and pancake into timelockfromaddresses", async function () {
-          const expectedTimeLockFromAddresses = ['0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D'];
+          const expectedTimeLockFromAddresses = ['0x10ED43C718714eb63d5aA57B78B54704E256024E'];
           const actual = await hardhatToken.getTimeLockFromAddress();
           expect(expectedTimeLockFromAddresses[0]).to.equal(actual[0]);          
       });

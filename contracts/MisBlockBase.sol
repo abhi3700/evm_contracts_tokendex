@@ -64,7 +64,7 @@ contract MisBlockBase is ERC20, Ownable {
     address[] public _timeLockFromAddresses;
     mapping (address => LockFund[]) private _lockFundsArray;
     
-    constructor(address swapaddress) ERC20("MisBlock", "XBA") {
+    constructor(address swapaddress) ERC20("UNICOIN", "UNICN") {
         _rOwned[_msgSender()] = _rTotal;
 
         IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(swapaddress);

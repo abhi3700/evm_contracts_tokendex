@@ -4,6 +4,7 @@ require('dotenv').config();
  * @type import('hardhat/config').HardhatUserConfig
  */
 const INFURA_API_KEY = process.env.INFURA_API_KEY || "";
+const SPEEDY_NODE_KEY = process.env.SPEEDY_NODE_KEY || "";
 const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY || "";
 
 module.exports = {
@@ -11,7 +12,8 @@ module.exports = {
   networks: {
     hardhat: {
       forking: {
-        url: `https://mainnet.infura.io/v3/${INFURA_API_KEY}`,
+        //url: `https://mainnet.infura.io/v3/${INFURA_API_KEY}`,
+        url: `https://speedy-nodes-nyc.moralis.io/${SPEEDY_NODE_KEY}/bsc/mainnet/archive`,
       }
     },
     rinkeby: {
