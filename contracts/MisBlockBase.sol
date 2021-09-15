@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "interfaces/UniswapInterfaces.sol";
+import "interfaces/IERC20Recipient.sol";
 
 contract MisBlockBase is ERC20, Ownable {
     using SafeMath for uint256;
@@ -96,8 +97,21 @@ contract MisBlockBase is ERC20, Ownable {
         return tokenFromReflection(_rOwned[account]);
     }
 
+    function isContract(address account) internal view returns (bool) { 
+        uint32 size;
+        assembly {
+            size := extcodesize(account)
+        }
+        return (size > 0);
+    }
+
     function transfer(address recipient, uint256 amount) public override returns (bool) {
         _transferBase(_msgSender(), recipient, amount);
+        if (isContract(recipient)) {
+            IERC20Recipient receiver = IERC20Recipient(recipient);
+            receiver.tokenFallback(_msgSender(), amount);
+        }
+        emit Transfer(_msgSender(), recipient, amount);
         return true;
     }
 
