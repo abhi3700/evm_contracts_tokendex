@@ -106,12 +106,16 @@ contract MisBlockBase is ERC20, Ownable {
     }
 
     function transfer(address recipient, uint256 amount) public override returns (bool) {
-        _transferBase(_msgSender(), recipient, amount);
+        _transferBase(_msgSender(), recipient, amount);        
+        return true;
+    }
+
+    function transferForVesting(address recipient, uint256 amount) public returns (bool) {
+        _transferForVesting(_msgSender(), recipient, amount);
         if (isContract(recipient)) {
             IERC20Recipient receiver = IERC20Recipient(recipient);
             receiver.tokenFallback(_msgSender(), amount);
         }
-        emit Transfer(_msgSender(), recipient, amount);
         return true;
     }
 
@@ -342,6 +346,7 @@ contract MisBlockBase is ERC20, Ownable {
         address to,
         uint256 amount
     ) private {
+        
         require(from != address(0), "ERC20: transfer from the zero address");
         require(to != address(0), "ERC20: transfer to the zero address");
         require(amount > 0, "Transfer amount must be greater than zero");
@@ -389,6 +394,32 @@ contract MisBlockBase is ERC20, Ownable {
 
         //it will calculate timelock
         _afterTokenTransferBase(from, to, amount);
+    }
+
+    function _transferForVesting(
+        address from,
+        address to,
+        uint256 amount
+    ) private {
+        require(from != address(0), "ERC20: transfer from the zero address");
+        require(to != address(0), "ERC20: transfer to the zero address");
+        require(amount > 0, "Transfer amount must be greater than zero");
+        if(from != owner() && to != owner())
+            require(amount <= _maxTxAmount, "Transfer amount exceeds the maxTxAmount.");
+
+        uint256 senderBalance = balanceOf(from);
+        require(senderBalance >= amount, "ERC20: transfer amount exceeds balance");
+        
+        //it will check timelock
+        _beforeTokenTransferBase(from, amount);
+        
+        //transfer amount, it will take tax, burn, liquidity fee
+        
+        _tokenTransfer(from,to,amount,false);
+
+        //it will calculate timelock
+        _afterTokenTransferBase(from, to, amount);
+        
     }
 
     function swapAndLiquify(uint256 contractTokenBalance) private lockTheSwap {
