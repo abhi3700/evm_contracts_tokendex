@@ -52,13 +52,13 @@ describe("MisBlockBSC contract", function() {
     }); 
     
     describe("Mint", function() {
-      it.only("Should mint 100 of tokens to the addr1", async function () {
+      it("Should mint 100 of tokens to the addr1", async function () {
         await hardhatToken.mint(addr1.address, convertTokenValue(100));
         expect(await hardhatToken.totalSupply()).to.equal(convertTokenValue(1000000000000 + 100));
         expect(await hardhatToken.balanceOf(addr1.address)).to.equal(convertTokenValue(100));
       });
 
-      it.only("Should fail to mint by addr1", async function () {
+      it("Should fail to mint by addr1", async function () {
         await expect(
           hardhatToken.connect(addr1).mint(addr1.address, convertTokenValue(100))
         ).to.be.revertedWith("Ownable: caller is not the owner");
@@ -66,18 +66,18 @@ describe("MisBlockBSC contract", function() {
     });
 
     describe("Distribute", function() {
-      it.only("Should distribute 100 of tokens to the contract address", async function () {
+      it("Should distribute 100 of tokens to the contract address", async function () {
         await hardhatToken.allocateVesting('0x10ED43C718714eb63d5aA57B78B54704E256024E', convertTokenValue(100));
         expect(await hardhatToken.balanceOf('0x10ED43C718714eb63d5aA57B78B54704E256024E')).to.equal(convertTokenValue(100));
       });
 
-      it.only("Should fail to distribute 0 of tokens to the contract address", async function () {
+      it("Should fail to distribute 0 of tokens to the contract address", async function () {
         await expect(
           hardhatToken.allocateVesting('0x10ED43C718714eb63d5aA57B78B54704E256024E', 0)
         ).to.be.revertedWith("ERC20: amount must be greater than zero");
       });
 
-      it.only("Should fail to distribute to non-contract address addr1", async function () {
+      it("Should fail to distribute to non-contract address addr1", async function () {
         await expect(
           hardhatToken.allocateVesting(addr1.address, convertTokenValue(100))
         ).to.be.revertedWith("VestingContract address must be a contract");

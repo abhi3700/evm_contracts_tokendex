@@ -24,7 +24,7 @@ contract MisBlockBase is ERC20, Pausable {
    
     uint256 private constant MAX = ~uint256(0) / 1000;
     uint256 private _tTotal = 1000000000000 * 10**18;
-    uint256 private _rTotal = (MAX - (MAX % _tTotal));
+    uint256 private _rTotal = MAX.sub(MAX.mod(_tTotal));
     uint256 private _tFeeTotal;
 
     uint256 public _deployTime = block.timestamp;
