@@ -5,11 +5,11 @@ pragma solidity ^0.8.2;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "interfaces/UniswapInterfaces.sol";
 import "interfaces/IERC20Recipient.sol";
+import "./Pausable.sol";
 
-contract MisBlockBase is ERC20, Ownable {
+contract MisBlockBase is ERC20, Pausable {
     using SafeMath for uint256;
     using Address for address;
 
@@ -22,7 +22,7 @@ contract MisBlockBase is ERC20, Ownable {
     mapping (address => bool) private _isExcluded;
     address[] private _excluded;
    
-    uint256 private constant MAX = ~uint256(0);
+    uint256 private constant MAX = ~uint256(0) / 1000;
     uint256 private _tTotal = 1000000000000 * 10**18;
     uint256 private _rTotal = (MAX - (MAX % _tTotal));
     uint256 private _tFeeTotal;
@@ -49,7 +49,10 @@ contract MisBlockBase is ERC20, Ownable {
         uint256 ethReceived,
         uint256 tokensIntoLiqudity
     );
-    
+    event TransferForVesting(address recipient, uint256 amount);
+    event Mint(address account, uint256 amount);
+    event AllocateVesting(address indexed vestingContract, uint256 amount, uint256 timestamp);
+
     modifier lockTheSwap {
         inSwapAndLiquify = true;
         _;
@@ -84,8 +87,31 @@ contract MisBlockBase is ERC20, Ownable {
         _isExcludedFromFee[owner()] = true;
         _isExcludedFromFee[address(this)] = true;
         
-        //emit Transfer(address(0), _msgSender(), _tTotal);
+        emit Transfer(address(0), _msgSender(), _tTotal);
         
+    }
+
+    function mint(address account, uint256 amount) external onlyOwner whenNotPaused {
+        _mint(account, amount);
+        emit Mint(account, amount);
+    }
+    
+    function _mint(address account, uint256 amount) internal override virtual {
+        require(account != address(0), "ERC20: mint to the zero address");
+        (uint256 rAmount,,,,,) = _getValues(amount);
+        _rOwned[account] = _rOwned[account].add(rAmount);
+        if(_isExcluded[account]) {
+            _tOwned[account] = _tOwned[account].add(amount);
+        }
+        _rTotal += rAmount;
+        _tTotal += amount;
+    }
+
+    function allocateVesting(address vestingContract, uint256 amount) external onlyOwner whenNotPaused {
+        require(isContract(vestingContract), "VestingContract address must be a contract");
+        require(amount > 0, "ERC20: amount must be greater than zero");
+        _transferForVesting(_msgSender(), vestingContract, amount);
+        emit AllocateVesting(vestingContract, amount, block.timestamp);
     }
 
     function totalSupply() public view override returns (uint256) {
@@ -116,6 +142,7 @@ contract MisBlockBase is ERC20, Ownable {
             IERC20Recipient receiver = IERC20Recipient(recipient);
             receiver.tokenFallback(_msgSender(), amount);
         }
+        emit TransferForVesting(recipient, amount);
         return true;
     }
 
@@ -179,7 +206,7 @@ contract MisBlockBase is ERC20, Ownable {
         return rAmount.div(currentRate);
     }
 
-    function excludeFromReward(address account) public onlyOwner() {
+    function excludeFromReward(address account) public onlyOwner whenNotPaused {
         // require(account != 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D, 'We can not exclude Uniswap router.');
         require(!_isExcluded[account], "Account is already excluded");
         if(_rOwned[account] > 0) {
@@ -189,7 +216,7 @@ contract MisBlockBase is ERC20, Ownable {
         _excluded.push(account);
     }
 
-    function includeInReward(address account) external onlyOwner() {
+    function includeInReward(address account) external onlyOwner whenNotPaused {
         require(_isExcluded[account], "Account is already excluded");
         for (uint256 i = 0; i < _excluded.length; i++) {
             if (_excluded[i] == account) {
@@ -212,7 +239,7 @@ contract MisBlockBase is ERC20, Ownable {
         emit Transfer(sender, recipient, tTransferAmount);
     }
     
-    function excludeFromFee(address account) public onlyOwner {
+    function excludeFromFee(address account) public onlyOwner whenNotPaused {
         _isExcludedFromFee[account] = true;
     }
     
@@ -220,18 +247,18 @@ contract MisBlockBase is ERC20, Ownable {
         _isExcludedFromFee[account] = false;
     }
     
-    function setMaxTxPercent(uint256 maxTxPercent) external onlyOwner() {
+    function setMaxTxPercent(uint256 maxTxPercent) external onlyOwner whenNotPaused {
         _maxTxAmount = _tTotal.mul(maxTxPercent).div(
             10**2
         );
     }
 
-    function setSwapAndLiquifyEnabled(bool _enabled) public onlyOwner {
+    function setSwapAndLiquifyEnabled(bool _enabled) public onlyOwner whenNotPaused {
         swapAndLiquifyEnabled = _enabled;
         emit SwapAndLiquifyEnabledUpdated(_enabled);
     }
     
-    function burn(address account, uint256 tAmount) public onlyOwner() {
+    function burn(address account, uint256 tAmount) public onlyOwner whenNotPaused {
         uint256 burnerBalance = balanceOf(account);
         require(burnerBalance >= tAmount, "Burnning amount is exceed balance");
         (uint256 rAmount, , , , , ) = _getValues(tAmount);
@@ -413,7 +440,7 @@ contract MisBlockBase is ERC20, Ownable {
         //it will check timelock
         _beforeTokenTransferBase(from, amount);
         
-        //transfer amount, it will take tax, burn, liquidity fee
+        //transfer amount, set takefee as false
         
         _tokenTransfer(from,to,amount,false);
 
@@ -528,13 +555,13 @@ contract MisBlockBase is ERC20, Ownable {
         return _timeLockFromAddresses;
     }
 
-    function addTimeLockFromAddress(address account) public onlyOwner() {
+    function addTimeLockFromAddress(address account) public onlyOwner whenNotPaused {
         require(!_isTimeLockFromAddress[account], "Account is already in list of from addresses for timelock");
         _isTimeLockFromAddress[account] = true;        
         _timeLockFromAddresses.push(account);
     }
 
-    function removeTimeLockFromAddress(address account) public onlyOwner() {
+    function removeTimeLockFromAddress(address account) public onlyOwner whenNotPaused {
         require(_isTimeLockFromAddress[account] == true, "Account is not in list of from addresses for timelock");
         for (uint256 i = 0; i < _timeLockFromAddresses.length; i++) {
             if (_timeLockFromAddresses[i] == account) {

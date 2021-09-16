@@ -15,42 +15,75 @@ describe("MisBlockETH contract", function() {
     let vestingC;
     
     beforeEach(async function () {        
-        this.timeout(50000);
-        // const INFURA_API_KEY = process.env.INFURA_API_KEY || "";
-      
-        // await network.provider.request({
-        //   method: "hardhat_reset",
-        //   params: [
-        //     {
-        //       forking: {
-        //         jsonRpcUrl: `https://mainnet.infura.io/v3/${INFURA_API_KEY}`,
-        //       },
-        //     },
-        //   ],
-        // });
-        
-        // Get the ContractFactory and Signers here.
-        Token = await ethers.getContractFactory("MisBlockETH");
-        [owner, addr1, addr2, addr3, addr4, vestingC] = await ethers.getSigners();
+      this.timeout(50000);
+      // const INFURA_API_KEY = process.env.INFURA_API_KEY || "";
     
-        // To deploy our contract, we just have to call Token.deploy() and await
-        // for it to be deployed(), which happens onces its transaction has been
-        // mined.
-        hardhatToken = await Token.deploy();
-        await hardhatToken.deployed();    
+      // await network.provider.request({
+      //   method: "hardhat_reset",
+      //   params: [
+      //     {
+      //       forking: {
+      //         jsonRpcUrl: `https://mainnet.infura.io/v3/${INFURA_API_KEY}`,
+      //       },
+      //     },
+      //   ],
+      // });
+      
+      // Get the ContractFactory and Signers here.
+      Token = await ethers.getContractFactory("MisBlockETH");
+      [owner, addr1, addr2, addr3, addr4, vestingC] = await ethers.getSigners();
+  
+      // To deploy our contract, we just have to call Token.deploy() and await
+      // for it to be deployed(), which happens onces its transaction has been
+      // mined.
+      hardhatToken = await Token.deploy();
+      await hardhatToken.deployed();    
     });
 
     describe("Deployment", function () {
-        it("Should assign the total supply of tokens to the owner and it should be 1T", async function () {
-          const ownerBalance = await hardhatToken.balanceOf(owner.address);
-          expect(await hardhatToken.totalSupply()).to.equal(ownerBalance).to.equal(convertTokenValue(1000000000000));
-        });
-        it("Should push 2 addresses of uniswap and pancake into timelockfromaddresses", async function () {
-          const expectedTimeLockFromAddresses = ['0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D'];
-          const actual = await hardhatToken.getTimeLockFromAddress();
-          expect(expectedTimeLockFromAddresses[0]).to.equal(actual[0]);          
+      it("Should assign the total supply of tokens to the owner and it should be 1T", async function () {
+        const ownerBalance = await hardhatToken.balanceOf(owner.address);
+        expect(await hardhatToken.totalSupply()).to.equal(ownerBalance).to.equal(convertTokenValue(1000000000000));
+      });
+      it("Should push uniswap router into timelockfromaddresses", async function () {
+        const expectedTimeLockFromAddresses = ['0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D'];
+        const actual = await hardhatToken.getTimeLockFromAddress();
+        expect(expectedTimeLockFromAddresses[0]).to.equal(actual[0]);          
       });
     }); 
+
+    describe("Mint", function() {
+      it("Should mint 100 of tokens to the addr1", async function () {
+        await hardhatToken.mint(addr1.address, convertTokenValue(100));
+        expect(await hardhatToken.totalSupply()).to.equal(convertTokenValue(1000000000000 + 100));
+        expect(await hardhatToken.balanceOf(addr1.address)).to.equal(convertTokenValue(100));
+      });
+
+      it("Should fail to mint by addr1", async function () {
+        await expect(
+          hardhatToken.connect(addr1).mint(addr1.address, convertTokenValue(100))
+        ).to.be.revertedWith("Ownable: caller is not the owner");
+      });
+    });
+
+    describe("Distribute", function() {
+      it("Should distribute 100 of tokens to the contract address", async function () {
+        await hardhatToken.allocateVesting('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', convertTokenValue(100));
+        expect(await hardhatToken.balanceOf('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D')).to.equal(convertTokenValue(100));
+      });
+
+      it("Should fail to distribute 0 of tokens to the contract address", async function () {
+        await expect(
+          hardhatToken.allocateVesting('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', 0)
+        ).to.be.revertedWith("ERC20: amount must be greater than zero");
+      });
+
+      it("Should fail to distribute to non-contract address addr1", async function () {
+        await expect(
+          hardhatToken.allocateVesting(addr1.address, convertTokenValue(100))
+        ).to.be.revertedWith("VestingContract address must be a contract");
+      });
+    });
     
     describe("TimeLockFromAddresses", function () {
       it("Should add/remove timelock address successfully", async function () {

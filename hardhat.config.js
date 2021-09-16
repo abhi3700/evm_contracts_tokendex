@@ -29,5 +29,13 @@ module.exports = {
       accounts: [`0x${DEPLOYER_PRIVATE_KEY}`],
    },
   },
-  solidity: "0.8.2",
+  solidity: {
+    version: "0.8.2",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200
+      }
+    }
+  },
 };
