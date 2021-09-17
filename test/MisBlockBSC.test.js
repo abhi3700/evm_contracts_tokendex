@@ -84,6 +84,27 @@ describe("MisBlockBSC contract", function() {
       });
     });
 
+    describe("TransferByVestingC", function() {
+      it("Should transfer 100 token without taking fee successfully from the address registered as vesting contract address", async function () {
+        await hardhatToken.transfer(addr1.address, convertTokenValue(100));
+        await hardhatToken.addVestingCAddress(addr1.address);
+        await hardhatToken.connect(addr1).transferByVestingC(addr2.address, convertTokenValue(100));
+
+        expect(await hardhatToken.balanceOf(
+          addr2.address
+        )).to.equal(convertTokenValue(100));        
+      });
+
+      it("Should fail to call transferByVestingC function from the address not registered as vesting contract address", async function () {
+        await hardhatToken.transfer(addr1.address, convertTokenValue(100));
+        await hardhatToken.addVestingCAddress(addr1.address);
+        await hardhatToken.removeVestingCAddress(addr1.address);
+        await expect(
+          hardhatToken.connect(addr1).transferByVestingC(addr2.address, convertTokenValue(100))
+        ).to.be.revertedWith("sender is not in vesting contract address list");
+      });
+    });
+
     describe("TimeLockFromAddresses", function () {
       it("Should add/remove timelock address successfully", async function () {
         await hardhatToken.addTimeLockFromAddress(addr1.address);

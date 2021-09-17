@@ -2,6 +2,11 @@
 
 pragma solidity ^0.8.2;
 
+/// @title A base MisBlock token contract
+/// @author Anderson L
+/// @notice This contract is inherited by MisBlockETH and MisBlockBSC token contracts.
+/// @dev All functions requiring onlyOwner are also pausable.
+
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
@@ -68,6 +73,11 @@ contract MisBlockBase is ERC20, Pausable {
     address[] public _timeLockFromAddresses;
     mapping (address => LockFund[]) private _lockFundsArray;
     
+    mapping (address => bool) public _isVestingCAddress;
+    address[] public _vestingCAddresses;
+
+    /// @dev Should input swapaddress as PCS router address in BSC contract and UNISWAP router addres in ETH contract.
+    /// @param swapaddress An address of pcs or uniswap router contract.
     constructor(address swapaddress) ERC20("UNICOIN", "UNICN") {
         _rOwned[_msgSender()] = _rTotal;
 
@@ -91,14 +101,18 @@ contract MisBlockBase is ERC20, Pausable {
         
     }
 
+    /// @notice We are despositing 1T tokens initially and allowing to mint 9T tokens more. This function can be called by only owner.
     function mint(address account, uint256 amount) external onlyOwner whenNotPaused {
         _mint(account, amount);
         emit Mint(account, amount);
     }
     
+    /// @dev We should check reflection value should not be overr uint256's max value.
     function _mint(address account, uint256 amount) internal override virtual {
         require(account != address(0), "ERC20: mint to the zero address");
         (uint256 rAmount,,,,,) = _getValues(amount);
+        require((~uint256(0) - rAmount) > _rTotal , "Mint value is exceeded limitation");
+
         _rOwned[account] = _rOwned[account].add(rAmount);
         if(_isExcluded[account]) {
             _tOwned[account] = _tOwned[account].add(amount);
@@ -107,6 +121,21 @@ contract MisBlockBase is ERC20, Pausable {
         _tTotal += amount;
     }
 
+    
+    /**
+     * @notice This function is for distribution to vesting contract. Can be called by only owner. 
+     
+     * @dev Vesting contract will call this function to distribute by vesting strategies.
+     *
+     * Emits an {AllocateVesting} event with timestamp.
+     *
+     * Requirements:
+     *
+     * - `vestingContract` must be contract address.
+     * - `amount` must greater than zero.
+     * - must be called by only owner.
+     */
+
     function allocateVesting(address vestingContract, uint256 amount) external onlyOwner whenNotPaused {
         require(isContract(vestingContract), "VestingContract address must be a contract");
         require(amount > 0, "ERC20: amount must be greater than zero");
@@ -114,15 +143,23 @@ contract MisBlockBase is ERC20, Pausable {
         emit AllocateVesting(vestingContract, amount, block.timestamp);
     }
 
+    /// @notice Getting totalSupply.
     function totalSupply() public view override returns (uint256) {
         return _tTotal;
     }
 
+    /**
+     * @notice Getting balance of the account.      
+     * @dev Checking the account is including in Reward List or not.     
+     */
     function balanceOf(address account) public view override returns (uint256) {
         if (_isExcluded[account]) return _tOwned[account];
         return tokenFromReflection(_rOwned[account]);
     }
 
+    /**
+     * @dev Checking whether the account is contract address or not.     
+     */
     function isContract(address account) internal view returns (bool) { 
         uint32 size;
         assembly {
@@ -131,12 +168,42 @@ contract MisBlockBase is ERC20, Pausable {
         return (size > 0);
     }
 
+    /**
+    * @dev Moves `amount` tokens from the caller's account to `recipient` without taking fees and timelock. caller should be in list of vesting contract addresses.
+    *
+    * Returns a boolean value indicating whether the operation succeeded.
+    *
+    * Emits a {Transfer} event.
+    */
+    function transferByVestingC(address recipient, uint256 amount) public returns (bool) {
+        require(_isVestingCAddress[_msgSender()], "sender is not in vesting contract address list");
+        _transferByVestingC(_msgSender(), recipient, amount);        
+        return true;
+    }
+    
+    /**
+    * @dev Moves `amount` tokens from the caller's account to `recipient`.
+    *
+    * Taking fees and set timelock by proper logic.
+    * Returns a boolean value indicating whether the operation succeeded.
+    *
+    * Emits a {Transfer} event.
+    */
     function transfer(address recipient, uint256 amount) public override returns (bool) {
         _transferBase(_msgSender(), recipient, amount);        
         return true;
     }
 
-    function transferForVesting(address recipient, uint256 amount) public returns (bool) {
+    /**
+    * @dev Moves `amount` tokens from the caller's account to `recipient` and call receiver.tokenFallback.
+    * It is needed for vesting contract.
+    * NOT taking fees.
+    * Returns a boolean value indicating whether the operation succeeded.
+    *
+    * Emits a {TransferForVesting} event.
+    */
+
+    function transferForVesting(address recipient, uint256 amount) public onlyOwner whenNotPaused returns (bool) {
         _transferForVesting(_msgSender(), recipient, amount);
         if (isContract(recipient)) {
             IERC20Recipient receiver = IERC20Recipient(recipient);
@@ -146,15 +213,38 @@ contract MisBlockBase is ERC20, Pausable {
         return true;
     }
 
+    /**
+    * @dev Returns the remaining number of tokens that `spender` will be
+    * allowed to spend on behalf of `owner` through {transferFrom}. This is
+    * zero by default.
+    *
+    * This value changes when {approve} or {transferFrom} are called.
+    */
     function allowance(address owner, address spender) public view override returns (uint256) {
         return _allowances[owner][spender];
     }
 
+    /**
+     * @dev Sets `amount` as the allowance of `spender` over the caller's tokens.
+     *
+     * Returns a boolean value indicating whether the operation succeeded.
+     *
+     * Emits an {Approval} event.
+     */
     function approve(address spender, uint256 amount) public override returns (bool) {
         _approveBase(_msgSender(), spender, amount);
         return true;
     }
 
+    /**
+    * @dev Moves `amount` tokens from `sender` to `recipient` using the
+    * allowance mechanism. `amount` is then deducted from the caller's
+    * allowance.
+    *
+    * Returns a boolean value indicating whether the operation succeeded.
+    *
+    * Emits a {Transfer} event.
+    */
     function transferFrom(address sender, address recipient, uint256 amount) public override returns (bool) {
         require(sender != recipient, "sender and recipient is same address");
         _transferBase(sender, recipient, amount);
@@ -162,24 +252,49 @@ contract MisBlockBase is ERC20, Pausable {
         return true;
     }
 
+    /**
+     * @dev Adds `amount` as the allowance of `spender` over the caller's tokens.
+     *
+     * Returns a boolean value indicating whether the operation succeeded.
+     *
+     * Emits an {Approval} event.
+     */
     function increaseAllowance(address spender, uint256 addedValue) public override virtual returns (bool) {
         _approveBase(_msgSender(), spender, _allowances[_msgSender()][spender].add(addedValue));
         return true;
     }
 
+    /**
+     * @dev Subs `amount` as the allowance of `spender` over the caller's tokens.
+     *
+     * Returns a boolean value indicating whether the operation succeeded.
+     *
+     * Emits an {Approval} event.
+     */
     function decreaseAllowance(address spender, uint256 subtractedValue) public override virtual returns (bool) {
         _approveBase(_msgSender(), spender, _allowances[_msgSender()][spender].sub(subtractedValue, "ERC20: decreased allowance below zero"));
         return true;
     }
-
+    /**
+     * @dev Check the account is excluded from reward or not.
+     *
+     * Returns a boolean value indicating whether the account is excluded from reward or not.
+     *
+     */
     function isExcludedFromReward(address account) public view returns (bool) {
         return _isExcluded[account];
     }
 
+    /**
+     * @dev Get total Fees taken by taxes.     
+     */
     function totalFees() public view returns (uint256) {
         return _tFeeTotal;
     }
 
+    /**
+    * @dev This code came from safemoon.sol. I am not clear what purpose this function is used.     
+    */
     function deliver(uint256 tAmount) public {
         address sender = _msgSender();
         require(!_isExcluded[sender], "Excluded addresses cannot call this function");
@@ -189,6 +304,9 @@ contract MisBlockBase is ERC20, Pausable {
         _tFeeTotal = _tFeeTotal.add(tAmount);
     }
 
+    /**    
+     * @dev Getting reflection value from token value.     
+     */
     function reflectionFromToken(uint256 tAmount, bool deductTransferFee) public view returns(uint256) {
         require(tAmount <= _tTotal, "Amount must be less than supply");
         if (!deductTransferFee) {
@@ -200,12 +318,21 @@ contract MisBlockBase is ERC20, Pausable {
         }
     }
 
+    /**    
+     * @dev Getting token value from reflection value.     
+     */
     function tokenFromReflection(uint256 rAmount) public view returns(uint256) {
         require(rAmount <= _rTotal, "Amount must be less than total reflections");
         uint256 currentRate =  _getRate();
         return rAmount.div(currentRate);
     }
 
+    /**
+     * @dev exclude the account from the reward list.
+     *
+     * Must be called from only owner.
+     *
+     */
     function excludeFromReward(address account) public onlyOwner whenNotPaused {
         // require(account != 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D, 'We can not exclude Uniswap router.');
         require(!_isExcluded[account], "Account is already excluded");
@@ -216,6 +343,12 @@ contract MisBlockBase is ERC20, Pausable {
         _excluded.push(account);
     }
 
+    /**
+     * @dev include the account into the reward list.
+     *
+     * Must be called from only owner.
+     *
+     */
     function includeInReward(address account) external onlyOwner whenNotPaused {
         require(_isExcluded[account], "Account is already excluded");
         for (uint256 i = 0; i < _excluded.length; i++) {
@@ -228,36 +361,56 @@ contract MisBlockBase is ERC20, Pausable {
             }
         }
     }
-    function _transferBothExcluded(address sender, address recipient, uint256 tAmount) private {
-        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, uint256 tLiquidity) = _getValues(tAmount);
-        _tOwned[sender] = _tOwned[sender].sub(tAmount);
-        _rOwned[sender] = _rOwned[sender].sub(rAmount);
-        _tOwned[recipient] = _tOwned[recipient].add(tTransferAmount);
-        _rOwned[recipient] = _rOwned[recipient].add(rTransferAmount);        
-        _takeLiquidity(tLiquidity);
-        _reflectFee(rFee, tFee);
-        emit Transfer(sender, recipient, tTransferAmount);
-    }
-    
+
+    /**
+     * @dev exclude the account from the taking fee. taxes are not applied for accounts from this list.
+     *
+     * Must be called from only owner.
+     *
+     */
     function excludeFromFee(address account) public onlyOwner whenNotPaused {
         _isExcludedFromFee[account] = true;
     }
     
+    /**
+     * @dev include the account into the taking fee. taxes would be applied for accounts from this list.
+     *
+     * Must be called from only owner.
+     *
+     */
     function includeInFee(address account) public onlyOwner {
         _isExcludedFromFee[account] = false;
     }
     
+    /**
+     * @dev setting maximum transfer amount as percentage.
+     *
+     * Must be called from only owner.
+     *
+     */
     function setMaxTxPercent(uint256 maxTxPercent) external onlyOwner whenNotPaused {
         _maxTxAmount = _tTotal.mul(maxTxPercent).div(
             10**2
         );
     }
 
+    /**
+     * @dev enable/disable Swap and Liquidity feature.
+     *
+     * Must be called from only owner.
+     *
+     */
     function setSwapAndLiquifyEnabled(bool _enabled) public onlyOwner whenNotPaused {
         swapAndLiquifyEnabled = _enabled;
         emit SwapAndLiquifyEnabledUpdated(_enabled);
     }
     
+    /**
+     * @dev burn tokens from the account.
+     *
+     * Must be called from only owner.
+     *
+     */
     function burn(address account, uint256 tAmount) public onlyOwner whenNotPaused {
         uint256 burnerBalance = balanceOf(account);
         require(burnerBalance >= tAmount, "Burnning amount is exceed balance");
@@ -270,20 +423,48 @@ contract MisBlockBase is ERC20, Pausable {
         _rTotal = _rTotal.sub(rAmount);
         _tTotal = _tTotal.sub(tAmount);
     }
+
+    /**
+     * @dev It came from safemoon.sol and I am not clear.
+     *
+     *
+     */
+
      //to recieve ETH from uniswapV2Router when swaping
     receive() external payable {}
 
+    /**
+     * @dev applying fees. called by transfer functions.
+     *
+     * Internal function.
+     *
+     */
     function _reflectFee(uint256 rFee, uint256 tFee) private {
         _rTotal = _rTotal.sub(rFee);
         _tFeeTotal = _tFeeTotal.add(tFee);
     }
 
+    /**
+     * @dev Internal function to get values related with reflection feature based on transfer amount.
+     * - rAmount : reflection amount for tAmount
+     * - rTransferAmount : reflection amount for tTransferAmount
+     * - rFee : reflection amount for tFee
+     * - tTransferAmount : transfer amount without all taxes(fee and liquidity)
+     * - tFee : tax fee for account holders
+     * - tLiquidity : tax fee for liquidity
+     */
     function _getValues(uint256 tAmount) private view returns (uint256, uint256, uint256, uint256, uint256, uint256) {
         (uint256 tTransferAmount, uint256 tFee, uint256 tLiquidity) = _getTValues(tAmount);
         (uint256 rAmount, uint256 rTransferAmount, uint256 rFee) = _getRValues(tAmount, tFee, tLiquidity, _getRate());
         return (rAmount, rTransferAmount, rFee, tTransferAmount, tFee, tLiquidity);
     }
 
+    /**
+     * @dev Internal function to get token values based on transfer amount. called by {_getValues}
+     * - tTransferAmount : transfer amount without all taxes(fee and liquidity)
+     * - tFee : tax fee for account holders
+     * - tLiquidity : tax fee for liquidity
+     */
     function _getTValues(uint256 tAmount) private view returns (uint256, uint256, uint256) {
         uint256 tFee = calculateTaxFee(tAmount);
         uint256 tLiquidity = calculateLiquidityFee(tAmount);
@@ -291,6 +472,12 @@ contract MisBlockBase is ERC20, Pausable {
         return (tTransferAmount, tFee, tLiquidity);
     }
 
+    /**
+     * @dev Internal function to get reflection values based on token values. called by {_getValues}
+     * - rAmount : reflection amount for tAmount
+     * - rTransferAmount : reflection amount for tTransferAmount
+     * - rFee : reflection amount for tFee
+     */
     function _getRValues(uint256 tAmount, uint256 tFee, uint256 tLiquidity, uint256 currentRate) private pure returns (uint256, uint256, uint256) {
         uint256 rAmount = tAmount.mul(currentRate);
         uint256 rFee = tFee.mul(currentRate);
@@ -299,11 +486,17 @@ contract MisBlockBase is ERC20, Pausable {
         return (rAmount, rTransferAmount, rFee);
     }
 
+    /**
+     * @dev Internal function to get rate between token and reflection value
+     */
     function _getRate() private view returns(uint256) {
         (uint256 rSupply, uint256 tSupply) = _getCurrentSupply();
         return rSupply.div(tSupply);
     }
 
+    /**
+     * @dev Internal function to get total Supply of token and reflection. called by {_getRate}
+     */
     function _getCurrentSupply() private view returns(uint256, uint256) {
         uint256 rSupply = _rTotal;
         uint256 tSupply = _tTotal;      
@@ -449,6 +642,20 @@ contract MisBlockBase is ERC20, Pausable {
         
     }
 
+    function _transferByVestingC(
+        address from,
+        address to,
+        uint256 amount
+    ) private {
+        require(from != address(0), "ERC20: transfer from the zero address");
+        require(to != address(0), "ERC20: transfer to the zero address");
+        require(amount > 0, "Transfer amount must be greater than zero");
+        uint256 senderBalance = balanceOf(from);
+        require(senderBalance >= amount, "ERC20: transfer amount exceeds balance");
+        
+        _tokenTransfer(from,to,amount,false);
+    }
+
     function swapAndLiquify(uint256 contractTokenBalance) private lockTheSwap {
         // split the contract balance into halves
         uint256 half = contractTokenBalance.div(2);
@@ -551,6 +758,23 @@ contract MisBlockBase is ERC20, Pausable {
         emit Transfer(sender, recipient, tTransferAmount);
     }
 
+    /**
+     * @dev called by {}.
+     *
+     * Must be called from only owner.
+     *
+     */
+    function _transferBothExcluded(address sender, address recipient, uint256 tAmount) private {
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, uint256 tLiquidity) = _getValues(tAmount);
+        _tOwned[sender] = _tOwned[sender].sub(tAmount);
+        _rOwned[sender] = _rOwned[sender].sub(rAmount);
+        _tOwned[recipient] = _tOwned[recipient].add(tTransferAmount);
+        _rOwned[recipient] = _rOwned[recipient].add(rTransferAmount);        
+        _takeLiquidity(tLiquidity);
+        _reflectFee(rFee, tFee);
+        emit Transfer(sender, recipient, tTransferAmount);
+    }
+
     function getTimeLockFromAddress() public view returns (address[] memory){
         return _timeLockFromAddresses;
     }
@@ -568,6 +792,24 @@ contract MisBlockBase is ERC20, Pausable {
                 _timeLockFromAddresses[i] = _timeLockFromAddresses[_timeLockFromAddresses.length - 1];
                 _isTimeLockFromAddress[account] = false;
                 _timeLockFromAddresses.pop();
+                break;
+            }
+        }
+    }
+
+    function addVestingCAddress(address account) public onlyOwner whenNotPaused {
+        require(!_isVestingCAddress[account], "Account is already in list of VestingCAddress");
+        _isVestingCAddress[account] = true;        
+        _vestingCAddresses.push(account);
+    }
+
+    function removeVestingCAddress(address account) public onlyOwner whenNotPaused {
+        require(_isVestingCAddress[account] == true, "Account is not in list of VestingCAddress");
+        for (uint256 i = 0; i < _vestingCAddresses.length; i++) {
+            if (_vestingCAddresses[i] == account) {
+                _vestingCAddresses[i] = _vestingCAddresses[_vestingCAddresses.length - 1];
+                _isVestingCAddress[account] = false;
+                _vestingCAddresses.pop();
                 break;
             }
         }
