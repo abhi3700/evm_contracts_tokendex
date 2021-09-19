@@ -10,9 +10,9 @@ pragma solidity ^0.8.2;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "interfaces/UniswapInterfaces.sol";
-import "interfaces/IERC20Recipient.sol";
-import "interfaces/IVesting.sol";
+import "./interfaces/UniswapInterfaces.sol";
+import "./interfaces/IERC20Recipient.sol";
+import "./interfaces/IVesting.sol";
 import "./Pausable.sol";
 
 contract MisBlockBase is ERC20, Pausable {
