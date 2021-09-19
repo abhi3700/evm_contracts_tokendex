@@ -12,6 +12,7 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "interfaces/UniswapInterfaces.sol";
 import "interfaces/IERC20Recipient.sol";
+import "interfaces/IVesting.sol";
 import "./Pausable.sol";
 
 contract MisBlockBase is ERC20, Pausable {
@@ -140,6 +141,8 @@ contract MisBlockBase is ERC20, Pausable {
         require(isContract(vestingContract), "VestingContract address must be a contract");
         require(amount > 0, "ERC20: amount must be greater than zero");
         _transferForVesting(_msgSender(), vestingContract, amount);
+
+        Vesting(vestingContract).updateMaxVestingAmount(amount);
         emit AllocateVesting(vestingContract, amount, block.timestamp);
     }
 
