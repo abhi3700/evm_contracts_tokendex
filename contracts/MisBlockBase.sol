@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.2;
+pragma solidity ^0.8.4;
 
 /// @title A base MisBlock token contract
 /// @author Anderson L
@@ -9,13 +9,14 @@ pragma solidity ^0.8.2;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import '@openzeppelin/contracts/access/Ownable.sol';
 import "@openzeppelin/contracts/utils/Address.sol";
+import '@openzeppelin/contracts/security/Pausable.sol';
 import "./interfaces/UniswapInterfaces.sol";
 import "./interfaces/IERC20Recipient.sol";
 import "./interfaces/IVesting.sol";
-import "./Pausable.sol";
 
-contract MisBlockBase is ERC20, Pausable {
+contract MisBlockBase is ERC20, Pausable, Ownable {
     using SafeMath for uint256;
     using Address for address;
 
@@ -77,6 +78,7 @@ contract MisBlockBase is ERC20, Pausable {
     mapping (address => bool) public _isVestingCAddress;
     address[] public _vestingCAddresses;
 
+    /// @notice Constructor. The token name is UNICOIN and the symbol name is UNICN.
     /// @dev Should input swapaddress as PCS router address in BSC contract and UNISWAP router addres in ETH contract.
     /// @param swapaddress An address of pcs or uniswap router contract.
     constructor(address swapaddress) ERC20("UNICOIN", "UNICN") {
@@ -142,7 +144,7 @@ contract MisBlockBase is ERC20, Pausable {
         require(amount > 0, "ERC20: amount must be greater than zero");
         _transferForVesting(_msgSender(), vestingContract, amount);
 
-        Vesting(vestingContract).updateMaxVestingAmount(amount);
+        IVesting(vestingContract).updateMaxVestingAmount(amount);
         emit AllocateVesting(vestingContract, amount, block.timestamp);
     }
 
@@ -172,6 +174,7 @@ contract MisBlockBase is ERC20, Pausable {
     }
 
     /**
+    * @notice This function was made to be called by vesting contract.
     * @dev Moves `amount` tokens from the caller's account to `recipient` without taking fees and timelock. caller should be in list of vesting contract addresses.
     *
     * Returns a boolean value indicating whether the operation succeeded.
@@ -185,6 +188,7 @@ contract MisBlockBase is ERC20, Pausable {
     }
     
     /**
+    * @notice This function is standard transfer function.
     * @dev Moves `amount` tokens from the caller's account to `recipient`.
     *
     * Taking fees and set timelock by proper logic.
@@ -198,6 +202,7 @@ contract MisBlockBase is ERC20, Pausable {
     }
 
     /**
+    * @notice This function is to transfer tokens to vesting contracts.
     * @dev Moves `amount` tokens from the caller's account to `recipient` and call receiver.tokenFallback.
     * It is needed for vesting contract.
     * NOT taking fees.
@@ -217,6 +222,7 @@ contract MisBlockBase is ERC20, Pausable {
     }
 
     /**
+    * @notice This function is to getting allowance of spender.
     * @dev Returns the remaining number of tokens that `spender` will be
     * allowed to spend on behalf of `owner` through {transferFrom}. This is
     * zero by default.
@@ -228,6 +234,7 @@ contract MisBlockBase is ERC20, Pausable {
     }
 
     /**
+     * @notice This function is to approve transfer.
      * @dev Sets `amount` as the allowance of `spender` over the caller's tokens.
      *
      * Returns a boolean value indicating whether the operation succeeded.
@@ -240,6 +247,7 @@ contract MisBlockBase is ERC20, Pausable {
     }
 
     /**
+    * @notice This function is for delegating transfer.
     * @dev Moves `amount` tokens from `sender` to `recipient` using the
     * allowance mechanism. `amount` is then deducted from the caller's
     * allowance.
@@ -256,6 +264,7 @@ contract MisBlockBase is ERC20, Pausable {
     }
 
     /**
+     * @notice This function is to increase allowance.
      * @dev Adds `amount` as the allowance of `spender` over the caller's tokens.
      *
      * Returns a boolean value indicating whether the operation succeeded.
@@ -268,6 +277,7 @@ contract MisBlockBase is ERC20, Pausable {
     }
 
     /**
+     * @notice This function is to decrease allowance.
      * @dev Subs `amount` as the allowance of `spender` over the caller's tokens.
      *
      * Returns a boolean value indicating whether the operation succeeded.
@@ -279,6 +289,7 @@ contract MisBlockBase is ERC20, Pausable {
         return true;
     }
     /**
+     * @notice This function is to check whether the account is excluded from reward or not.
      * @dev Check the account is excluded from reward or not.
      *
      * Returns a boolean value indicating whether the account is excluded from reward or not.
@@ -289,7 +300,7 @@ contract MisBlockBase is ERC20, Pausable {
     }
 
     /**
-     * @dev Get total Fees taken by taxes.     
+     * @notice Get total Fees taken by taxes.     
      */
     function totalFees() public view returns (uint256) {
         return _tFeeTotal;
@@ -308,7 +319,7 @@ contract MisBlockBase is ERC20, Pausable {
     }
 
     /**    
-     * @dev Getting reflection value from token value.     
+     * @notice Getting reflection value from token value.     
      */
     function reflectionFromToken(uint256 tAmount, bool deductTransferFee) public view returns(uint256) {
         require(tAmount <= _tTotal, "Amount must be less than supply");
@@ -322,7 +333,7 @@ contract MisBlockBase is ERC20, Pausable {
     }
 
     /**    
-     * @dev Getting token value from reflection value.     
+     * @notice Getting token value from reflection value.     
      */
     function tokenFromReflection(uint256 rAmount) public view returns(uint256) {
         require(rAmount <= _rTotal, "Amount must be less than total reflections");
@@ -331,7 +342,7 @@ contract MisBlockBase is ERC20, Pausable {
     }
 
     /**
-     * @dev exclude the account from the reward list.
+     * @notice exclude the account from the reward list.
      *
      * Must be called from only owner.
      *
@@ -347,7 +358,7 @@ contract MisBlockBase is ERC20, Pausable {
     }
 
     /**
-     * @dev include the account into the reward list.
+     * @notice include the account into the reward list.
      *
      * Must be called from only owner.
      *
@@ -366,7 +377,7 @@ contract MisBlockBase is ERC20, Pausable {
     }
 
     /**
-     * @dev exclude the account from the taking fee. taxes are not applied for accounts from this list.
+     * @notice exclude the account from the taking fee. taxes are not applied for accounts from this list.
      *
      * Must be called from only owner.
      *
@@ -376,7 +387,7 @@ contract MisBlockBase is ERC20, Pausable {
     }
     
     /**
-     * @dev include the account into the taking fee. taxes would be applied for accounts from this list.
+     * @notice include the account into the taking fee. taxes would be applied for accounts from this list.
      *
      * Must be called from only owner.
      *
@@ -386,7 +397,7 @@ contract MisBlockBase is ERC20, Pausable {
     }
     
     /**
-     * @dev setting maximum transfer amount as percentage.
+     * @notice setting maximum transfer amount as percentage.
      *
      * Must be called from only owner.
      *
@@ -398,7 +409,7 @@ contract MisBlockBase is ERC20, Pausable {
     }
 
     /**
-     * @dev enable/disable Swap and Liquidity feature.
+     * @notice enable/disable Swap and Liquidity feature.
      *
      * Must be called from only owner.
      *
@@ -409,7 +420,7 @@ contract MisBlockBase is ERC20, Pausable {
     }
     
     /**
-     * @dev burn tokens from the account.
+     * @notice burn tokens from the account.
      *
      * Must be called from only owner.
      *
@@ -512,6 +523,9 @@ contract MisBlockBase is ERC20, Pausable {
         return (rSupply, tSupply);
     }
     
+    /**
+    * @dev Internal function to to apply liquidity fee.
+    */
     function _takeLiquidity(uint256 tLiquidity) private {
         uint256 currentRate =  _getRate();
         uint256 rLiquidity = tLiquidity.mul(currentRate);
@@ -520,18 +534,28 @@ contract MisBlockBase is ERC20, Pausable {
             _tOwned[address(this)] = _tOwned[address(this)].add(tLiquidity);
     }
     
+    /**
+    * @dev Internal function to calculate tax fee. Used 1000 instead of 100 for max percent to avoid decimals. For example, 7.5% will be calculated by 75/1000
+    */
     function calculateTaxFee(uint256 _amount) private view returns (uint256) {
         return _amount.mul(_taxFee).div(
             10**3
         );
     }
 
+    /**
+    * @dev Internal function to calculate liquidity fee. Used 1000 instead of 100 for max percent to avoid decimals. For example, 7.5% will be calculated by 75/1000
+    */
     function calculateLiquidityFee(uint256 _amount) private view returns (uint256) {
         return _amount.mul(_liquidityFee).div(
             10**3
         );
     }
     
+    /**
+    * @dev Internal function to set tax fees.
+    * First Month : 7.5%, Second Month : 5%, Third Month : 2.5%, From Fourth Month : 0
+    */
     function _setTaxFee(bool takeFee) private {
         if (!takeFee) {
             _taxFee = 0;
@@ -552,10 +576,17 @@ contract MisBlockBase is ERC20, Pausable {
 
     }
     
+    /**
+    * @notice Checking whether the address is excluded from fee or not
+    */
     function isExcludedFromFee(address account) public view returns(bool) {
         return _isExcludedFromFee[account];
     }
 
+    /**
+    * @dev Internal function to approve.
+    * Emits a {Approval} event.
+    */
     function _approveBase(address owner, address spender, uint256 amount) private {
         require(owner != address(0), "ERC20: approve from the zero address");
         require(spender != address(0), "ERC20: approve to the zero address");
@@ -564,6 +595,9 @@ contract MisBlockBase is ERC20, Pausable {
         emit Approval(owner, spender, amount);
     }
 
+    /**
+    * @dev Internal function for standard transfer.
+    */
     function _transferBase(
         address from,
         address to,
@@ -619,6 +653,9 @@ contract MisBlockBase is ERC20, Pausable {
         _afterTokenTransferBase(from, to, amount);
     }
 
+    /**
+    * @dev Internal function of transfer for vesting contract.
+    */
     function _transferForVesting(
         address from,
         address to,
@@ -645,6 +682,9 @@ contract MisBlockBase is ERC20, Pausable {
         
     }
 
+    /**
+    * @dev Internal function of transferByVestingC.
+    */
     function _transferByVestingC(
         address from,
         address to,
@@ -659,6 +699,10 @@ contract MisBlockBase is ERC20, Pausable {
         _tokenTransfer(from,to,amount,false);
     }
 
+    /**
+    * @dev Internal function of swap feature.
+    * Emits {SwapAndLiquify}
+    */
     function swapAndLiquify(uint256 contractTokenBalance) private lockTheSwap {
         // split the contract balance into halves
         uint256 half = contractTokenBalance.div(2);
@@ -682,6 +726,9 @@ contract MisBlockBase is ERC20, Pausable {
         emit SwapAndLiquify(half, newBalance, otherHalf);
     }
 
+    /**
+    * @dev Internal function for swapTokensForEth.
+    */
     function swapTokensForEth(uint256 tokenAmount) private {
         // generate the uniswap pair path of token -> weth
         address[] memory path = new address[](2);
@@ -700,6 +747,9 @@ contract MisBlockBase is ERC20, Pausable {
         );
     }
 
+    /**
+    * @dev Internal function for addLiquidity.
+    */
     function addLiquidity(uint256 tokenAmount, uint256 ethAmount) private {
         // approve token transfer to cover all possible scenarios
         _approveBase(address(this), address(uniswapV2Router), tokenAmount);
@@ -715,7 +765,10 @@ contract MisBlockBase is ERC20, Pausable {
         );
     }
 
-    //this method is responsible for taking all fee, if takeFee is true
+    /**
+    * @dev Internal function of transfer.
+    * this method is responsible for taking all fee, if takeFee is true
+    */    
     function _tokenTransfer(address sender, address recipient, uint256 amount,bool takeFee) private {
         _setTaxFee(takeFee);
         
@@ -732,6 +785,9 @@ contract MisBlockBase is ERC20, Pausable {
         }
     }
 
+    /**
+    * @dev called in case of both of sender and recipient are in reward list.
+    */   
     function _transferStandard(address sender, address recipient, uint256 tAmount) private {
         (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, uint256 tLiquidity) = _getValues(tAmount);
         _rOwned[sender] = _rOwned[sender].sub(rAmount);
@@ -741,6 +797,9 @@ contract MisBlockBase is ERC20, Pausable {
         emit Transfer(sender, recipient, tTransferAmount);
     }
 
+    /**
+    * @dev called in case of only sender is in reward list.
+    */   
     function _transferToExcluded(address sender, address recipient, uint256 tAmount) private {
         (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, uint256 tLiquidity) = _getValues(tAmount);
         _rOwned[sender] = _rOwned[sender].sub(rAmount);
@@ -751,6 +810,9 @@ contract MisBlockBase is ERC20, Pausable {
         emit Transfer(sender, recipient, tTransferAmount);
     }
 
+    /**
+    * @dev called in case of only recipient is in reward list.
+    */   
     function _transferFromExcluded(address sender, address recipient, uint256 tAmount) private {
         (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, uint256 tLiquidity) = _getValues(tAmount);
         _tOwned[sender] = _tOwned[sender].sub(tAmount);
@@ -762,11 +824,8 @@ contract MisBlockBase is ERC20, Pausable {
     }
 
     /**
-     * @dev called by {}.
-     *
-     * Must be called from only owner.
-     *
-     */
+    * @dev called in case of both are not in reward list.
+    */   
     function _transferBothExcluded(address sender, address recipient, uint256 tAmount) private {
         (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, uint256 tLiquidity) = _getValues(tAmount);
         _tOwned[sender] = _tOwned[sender].sub(tAmount);
@@ -778,16 +837,25 @@ contract MisBlockBase is ERC20, Pausable {
         emit Transfer(sender, recipient, tTransferAmount);
     }
 
+    /**
+    * @notice getting the list of addresses set as applying timelock from. All tokens transfered from addresses of this list is time locked by proper logic.
+    */ 
     function getTimeLockFromAddress() public view returns (address[] memory){
         return _timeLockFromAddresses;
     }
 
+    /**
+    * @notice add time lock address
+    */ 
     function addTimeLockFromAddress(address account) public onlyOwner whenNotPaused {
         require(!_isTimeLockFromAddress[account], "Account is already in list of from addresses for timelock");
         _isTimeLockFromAddress[account] = true;        
         _timeLockFromAddresses.push(account);
     }
 
+    /**
+    * @notice remove time lock address
+    */ 
     function removeTimeLockFromAddress(address account) public onlyOwner whenNotPaused {
         require(_isTimeLockFromAddress[account] == true, "Account is not in list of from addresses for timelock");
         for (uint256 i = 0; i < _timeLockFromAddresses.length; i++) {
@@ -800,12 +868,18 @@ contract MisBlockBase is ERC20, Pausable {
         }
     }
 
+    /**
+    * @notice add vesting contract address
+    */ 
     function addVestingCAddress(address account) public onlyOwner whenNotPaused {
         require(!_isVestingCAddress[account], "Account is already in list of VestingCAddress");
         _isVestingCAddress[account] = true;        
         _vestingCAddresses.push(account);
     }
 
+    /**
+    * @notice remove vesting contract address
+    */ 
     function removeVestingCAddress(address account) public onlyOwner whenNotPaused {
         require(_isVestingCAddress[account] == true, "Account is not in list of VestingCAddress");
         for (uint256 i = 0; i < _vestingCAddresses.length; i++) {
@@ -817,6 +891,13 @@ contract MisBlockBase is ERC20, Pausable {
             }
         }
     }
+
+    /**
+    * @dev Internal function to be called before token transfer.
+    * Check time locked funds.
+    * If the address is having 1000 tokens. And 500 tokens were time locked.
+    * At this point if the account wants to transfer 600 tokens, then it will be reverted since the user is having only 500 tokens available.
+    */ 
 
     function _beforeTokenTransferBase(
         address from,
@@ -833,6 +914,11 @@ contract MisBlockBase is ERC20, Pausable {
         }
         require(balanceOf(from) - lockedFundsSum >= amount, "Some of your balances were locked. And you don't have enough unlocked balance for this transaction.");
     }
+
+    /**
+    * @dev Internal function to be called after token transfer.
+    * Applying time lock against tokens transferred from addresses in the timelock list
+    */ 
 
     function _afterTokenTransferBase(
         address from,

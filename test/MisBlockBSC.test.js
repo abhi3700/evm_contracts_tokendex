@@ -66,14 +66,20 @@ describe("MisBlockBSC contract", function() {
     });
 
     describe("Distribute", function() {
-      it("Should distribute 100 of tokens to the contract address", async function () {
-        await hardhatToken.allocateVesting('0x10ED43C718714eb63d5aA57B78B54704E256024E', convertTokenValue(100));
-        expect(await hardhatToken.balanceOf('0x10ED43C718714eb63d5aA57B78B54704E256024E')).to.equal(convertTokenValue(100));
+      it.only("Should distribute 100 of tokens to the contract address", async function () {
+        const StakingContract = await ethers.getContractFactory('StakingContract');
+			  stakingContract = await StakingContract.deploy(hardhatToken.address, addr4.address, new Date(2021, 1, 18).getTime() / 1000);
+        await expect(
+          hardhatToken.allocateVesting(stakingContract.address, convertTokenValue(100))
+        ).to.emit(stakingContract, 'UpdateMaxVestingAmount');
+        expect(await hardhatToken.balanceOf(stakingContract.address)).to.equal(convertTokenValue(100));
       });
 
-      it("Should fail to distribute 0 of tokens to the contract address", async function () {
+      it.only("Should fail to distribute 0 of tokens to the contract address", async function () {
+        const StakingContract = await ethers.getContractFactory('StakingContract');
+			  stakingContract = await StakingContract.deploy(hardhatToken.address, addr4.address, new Date(2021, 1, 18).getTime() / 1000);
         await expect(
-          hardhatToken.allocateVesting('0x10ED43C718714eb63d5aA57B78B54704E256024E', 0)
+          hardhatToken.allocateVesting(stakingContract.address, 0)
         ).to.be.revertedWith("ERC20: amount must be greater than zero");
       });
 
