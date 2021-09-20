@@ -66,18 +66,28 @@ describe("MisBlockBSC contract", function() {
     });
 
     describe("Distribute", function() {
-      it.only("Should distribute 100 of tokens to the contract address", async function () {
+      it("Should distribute 100 of tokens to the contract address", async function () {
         const StakingContract = await ethers.getContractFactory('StakingContract');
 			  stakingContract = await StakingContract.deploy(hardhatToken.address, addr4.address, new Date(2021, 1, 18).getTime() / 1000);
+        await hardhatToken.addVestingCAddress(stakingContract.address);
         await expect(
           hardhatToken.allocateVesting(stakingContract.address, convertTokenValue(100))
         ).to.emit(stakingContract, 'UpdateMaxVestingAmount');
         expect(await hardhatToken.balanceOf(stakingContract.address)).to.equal(convertTokenValue(100));
       });
 
-      it.only("Should fail to distribute 0 of tokens to the contract address", async function () {
+      it("Should fail to call allocateVesting for the contract address not in the list", async function () {
         const StakingContract = await ethers.getContractFactory('StakingContract');
 			  stakingContract = await StakingContract.deploy(hardhatToken.address, addr4.address, new Date(2021, 1, 18).getTime() / 1000);
+        await expect(
+          hardhatToken.allocateVesting(stakingContract.address, convertTokenValue(100))
+        ).to.be.revertedWith("The address is not in vesting contract address list");
+      });
+
+      it("Should fail to distribute 0 of tokens to the contract address", async function () {
+        const StakingContract = await ethers.getContractFactory('StakingContract');
+			  stakingContract = await StakingContract.deploy(hardhatToken.address, addr4.address, new Date(2021, 1, 18).getTime() / 1000);
+        await hardhatToken.addVestingCAddress(stakingContract.address);
         await expect(
           hardhatToken.allocateVesting(stakingContract.address, 0)
         ).to.be.revertedWith("ERC20: amount must be greater than zero");

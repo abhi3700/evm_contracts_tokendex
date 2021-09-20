@@ -141,6 +141,7 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
 
     function allocateVesting(address vestingContract, uint256 amount) external onlyOwner whenNotPaused {
         require(isContract(vestingContract), "VestingContract address must be a contract");
+        require(_isVestingCAddress[vestingContract], "The address is not in vesting contract address list");
         require(amount > 0, "ERC20: amount must be greater than zero");
         _transferForVesting(_msgSender(), vestingContract, amount);
 
