@@ -19,15 +19,19 @@ module.exports = {
     rinkeby: {
       url: `https://rinkeby.infura.io/v3/${INFURA_API_KEY}`,
       accounts: [`0x${DEPLOYER_PRIVATE_KEY}`],
-    },
-    kovan: {
-      url: `https://rinkeby.infura.io/v3/${INFURA_API_KEY}`,
+    },    
+    eth: {
+      url: `https://mainnet.infura.io/v3/${INFURA_API_KEY}`,
+      accounts: [`0x${DEPLOYER_PRIVATE_KEY}`],
+    },    
+    bsctest: {
+      url: `https://data-seed-prebsc-1-s1.binance.org:8545/`,
       accounts: [`0x${DEPLOYER_PRIVATE_KEY}`],
     },
     bsc: {
       url: `https://bsc-dataseed.binance.org/`,
       accounts: [`0x${DEPLOYER_PRIVATE_KEY}`],
-   },
+    },
   },
   solidity: {
     version: "0.8.4",
