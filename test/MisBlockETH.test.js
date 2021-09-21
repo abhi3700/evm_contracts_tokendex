@@ -16,8 +16,7 @@ describe("MisBlockETH contract", function() {
     
     beforeEach(async function () {        
       this.timeout(50000);
-      // const INFURA_API_KEY = process.env.INFURA_API_KEY || "";
-    
+      // const INFURA_API_KEY = process.env.INFURA_API_KEY || "";    
       // await network.provider.request({
       //   method: "hardhat_reset",
       //   params: [
@@ -66,24 +65,40 @@ describe("MisBlockETH contract", function() {
       });
     });
 
-    describe("Distribute", function() {
-      it("Should distribute 100 of tokens to the contract address", async function () {
-        await hardhatToken.allocateVesting('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', convertTokenValue(100));
-        expect(await hardhatToken.balanceOf('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D')).to.equal(convertTokenValue(100));
-      });
+    // describe("Distribute", function() {
+    //   it("Should distribute 100 of tokens to the contract address", async function () {
+    //     const StakingContract = await ethers.getContractFactory('StakingContract');
+		// 	  stakingContract = await StakingContract.deploy(hardhatToken.address, addr4.address, new Date(2021, 1, 18).getTime() / 1000);
+    //     await hardhatToken.addVestingCAddress(stakingContract.address);
+    //     await expect(
+    //       hardhatToken.allocateVesting(stakingContract.address, convertTokenValue(100))
+    //     ).to.emit(stakingContract, 'UpdateMaxVestingAmount');
+    //     expect(await hardhatToken.balanceOf(stakingContract.address)).to.equal(convertTokenValue(100));
+    //   });
 
-      it("Should fail to distribute 0 of tokens to the contract address", async function () {
-        await expect(
-          hardhatToken.allocateVesting('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', 0)
-        ).to.be.revertedWith("ERC20: amount must be greater than zero");
-      });
+    //   it("Should fail to call allocateVesting for the contract address not in the list", async function () {
+    //     const StakingContract = await ethers.getContractFactory('StakingContract');
+		// 	  stakingContract = await StakingContract.deploy(hardhatToken.address, addr4.address, new Date(2021, 1, 18).getTime() / 1000);
+    //     await expect(
+    //       hardhatToken.allocateVesting(stakingContract.address, convertTokenValue(100))
+    //     ).to.be.revertedWith("The address is not in vesting contract address list");
+    //   });
 
-      it("Should fail to distribute to non-contract address addr1", async function () {
-        await expect(
-          hardhatToken.allocateVesting(addr1.address, convertTokenValue(100))
-        ).to.be.revertedWith("VestingContract address must be a contract");
-      });
-    });
+    //   it("Should fail to distribute 0 of tokens to the contract address", async function () {
+    //     const StakingContract = await ethers.getContractFactory('StakingContract');
+		// 	  stakingContract = await StakingContract.deploy(hardhatToken.address, addr4.address, new Date(2021, 1, 18).getTime() / 1000);
+    //     await hardhatToken.addVestingCAddress(stakingContract.address);
+    //     await expect(
+    //       hardhatToken.allocateVesting(stakingContract.address, 0)
+    //     ).to.be.revertedWith("ERC20: amount must be greater than zero");
+    //   });
+
+    //   it("Should fail to distribute to non-contract address addr1", async function () {
+    //     await expect(
+    //       hardhatToken.allocateVesting(addr1.address, convertTokenValue(100))
+    //     ).to.be.revertedWith("VestingContract address must be a contract");
+    //   });
+    // });
     
     describe("TimeLockFromAddresses", function () {
       it("Should add/remove timelock address successfully", async function () {

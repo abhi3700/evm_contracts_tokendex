@@ -14,7 +14,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import '@openzeppelin/contracts/security/Pausable.sol';
 import "./interfaces/UniswapInterfaces.sol";
 import "./interfaces/IERC20Recipient.sol";
-import "./interfaces/IVesting.sol";
+//import "./interfaces/IVesting.sol";
 
 contract MisBlockBase is ERC20, Pausable, Ownable {
     using SafeMath for uint256;
@@ -139,15 +139,15 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
      * - must be called by only owner.
      */
 
-    function allocateVesting(address vestingContract, uint256 amount) external onlyOwner whenNotPaused {
-        require(isContract(vestingContract), "VestingContract address must be a contract");
-        require(_isVestingCAddress[vestingContract], "The address is not in vesting contract address list");
-        require(amount > 0, "ERC20: amount must be greater than zero");
-        _transferForVesting(_msgSender(), vestingContract, amount);
+    // function allocateVesting(address vestingContract, uint256 amount) external onlyOwner whenNotPaused {
+    //     require(isContract(vestingContract), "VestingContract address must be a contract");
+    //     require(_isVestingCAddress[vestingContract], "The address is not in vesting contract address list");
+    //     require(amount > 0, "ERC20: amount must be greater than zero");
+    //     _transferForVesting(_msgSender(), vestingContract, amount);
 
-        IVesting(vestingContract).updateMaxVestingAmount(amount);
-        emit AllocateVesting(vestingContract, amount, block.timestamp);
-    }
+    //     IVesting(vestingContract).updateMaxVestingAmount(amount);
+    //     emit AllocateVesting(vestingContract, amount, block.timestamp);
+    // }
 
     /// @notice Getting totalSupply.
     function totalSupply() public view override returns (uint256) {
@@ -212,15 +212,15 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
     * Emits a {TransferForVesting} event.
     */
 
-    function transferForVesting(address recipient, uint256 amount) public onlyOwner whenNotPaused returns (bool) {
-        _transferForVesting(_msgSender(), recipient, amount);
-        if (isContract(recipient)) {
-            IERC20Recipient receiver = IERC20Recipient(recipient);
-            receiver.tokenFallback(_msgSender(), amount);
-        }
-        emit TransferForVesting(recipient, amount);
-        return true;
-    }
+    // function transferForVesting(address recipient, uint256 amount) public onlyOwner whenNotPaused returns (bool) {
+    //     _transferForVesting(_msgSender(), recipient, amount);
+    //     if (isContract(recipient)) {
+    //         IERC20Recipient receiver = IERC20Recipient(recipient);
+    //         receiver.tokenFallback(_msgSender(), amount);
+    //     }
+    //     emit TransferForVesting(recipient, amount);
+    //     return true;
+    // }
 
     /**
     * @notice This function is to getting allowance of spender.
@@ -639,11 +639,16 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
         //indicates if fee should be deducted from transfer
         bool takeFee = true;
         
+        //if from address is not in TimeLockFromAddress list, not taking fee
+        if(!_isTimeLockFromAddress[from]){
+            takeFee = false;
+        }
+        
         //if any account belongs to _isExcludedFromFee account then remove the fee
         if(_isExcludedFromFee[from] || _isExcludedFromFee[to]){
             takeFee = false;
         }
-        
+
         //it will check timelock
         _beforeTokenTransferBase(from, amount);
         
