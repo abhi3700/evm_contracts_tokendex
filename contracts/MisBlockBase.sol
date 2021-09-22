@@ -13,8 +13,6 @@ import '@openzeppelin/contracts/access/Ownable.sol';
 import "@openzeppelin/contracts/utils/Address.sol";
 import '@openzeppelin/contracts/security/Pausable.sol';
 import "./interfaces/UniswapInterfaces.sol";
-import "./interfaces/IERC20Recipient.sol";
-//import "./interfaces/IVesting.sol";
 
 contract MisBlockBase is ERC20, Pausable, Ownable {
     using SafeMath for uint256;
@@ -71,8 +69,8 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
         uint256 releasetime;
     }
     
-    mapping (address => bool) public _isTimeLockFromAddress;
-    address[] public _timeLockFromAddresses;
+    mapping (address => bool) public _isSwapAddress;
+    address[] public _swapAddresses;
     mapping (address => LockFund[]) private _lockFundsArray;
     
     mapping (address => bool) public _isVestingCAddress;
@@ -92,9 +90,9 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
         // set the rest of the contract variables
         uniswapV2Router = _uniswapV2Router;
         
-        // Uniswap Address should be in TimeLockFromAddress list
-        _isTimeLockFromAddress[swapaddress] = true;
-        _timeLockFromAddresses.push(swapaddress);
+        // Uniswap Address should be in SwapAddress list
+        _isSwapAddress[swapaddress] = true;
+        _swapAddresses.push(swapaddress);
 
         //exclude owner and this contract from fee
         _isExcludedFromFee[owner()] = true;
@@ -124,31 +122,6 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
         _tTotal += amount;
     }
 
-    
-    /**
-     * @notice This function is for distribution to vesting contract. Can be called by only owner. 
-     
-     * @dev Vesting contract will call this function to distribute by vesting strategies.
-     *
-     * Emits an {AllocateVesting} event with timestamp.
-     *
-     * Requirements:
-     *
-     * - `vestingContract` must be contract address.
-     * - `amount` must greater than zero.
-     * - must be called by only owner.
-     */
-
-    // function allocateVesting(address vestingContract, uint256 amount) external onlyOwner whenNotPaused {
-    //     require(isContract(vestingContract), "VestingContract address must be a contract");
-    //     require(_isVestingCAddress[vestingContract], "The address is not in vesting contract address list");
-    //     require(amount > 0, "ERC20: amount must be greater than zero");
-    //     _transferForVesting(_msgSender(), vestingContract, amount);
-
-    //     IVesting(vestingContract).updateMaxVestingAmount(amount);
-    //     emit AllocateVesting(vestingContract, amount, block.timestamp);
-    // }
-
     /// @notice Getting totalSupply.
     function totalSupply() public view override returns (uint256) {
         return _tTotal;
@@ -166,28 +139,14 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
     /**
      * @dev Checking whether the account is contract address or not.     
      */
-    function isContract(address account) internal view returns (bool) { 
-        uint32 size;
-        assembly {
-            size := extcodesize(account)
-        }
-        return (size > 0);
-    }
+    // function isContract(address account) internal view returns (bool) { 
+    //     uint32 size;
+    //     assembly {
+    //         size := extcodesize(account)
+    //     }
+    //     return (size > 0);
+    // }
 
-    /**
-    * @notice This function was made to be called by vesting contract.
-    * @dev Moves `amount` tokens from the caller's account to `recipient` without taking fees and timelock. caller should be in list of vesting contract addresses.
-    *
-    * Returns a boolean value indicating whether the operation succeeded.
-    *
-    * Emits a {Transfer} event.
-    */
-    function transferByVestingC(address recipient, uint256 amount) public returns (bool) {
-        require(_isVestingCAddress[_msgSender()], "sender is not in vesting contract address list");
-        _transferByVestingC(_msgSender(), recipient, amount);        
-        return true;
-    }
-    
     /**
     * @notice This function is standard transfer function.
     * @dev Moves `amount` tokens from the caller's account to `recipient`.
@@ -201,26 +160,6 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
         _transferBase(_msgSender(), recipient, amount);        
         return true;
     }
-
-    /**
-    * @notice This function is to transfer tokens to vesting contracts.
-    * @dev Moves `amount` tokens from the caller's account to `recipient` and call receiver.tokenFallback.
-    * It is needed for vesting contract.
-    * NOT taking fees.
-    * Returns a boolean value indicating whether the operation succeeded.
-    *
-    * Emits a {TransferForVesting} event.
-    */
-
-    // function transferForVesting(address recipient, uint256 amount) public onlyOwner whenNotPaused returns (bool) {
-    //     _transferForVesting(_msgSender(), recipient, amount);
-    //     if (isContract(recipient)) {
-    //         IERC20Recipient receiver = IERC20Recipient(recipient);
-    //         receiver.tokenFallback(_msgSender(), amount);
-    //     }
-    //     emit TransferForVesting(recipient, amount);
-    //     return true;
-    // }
 
     /**
     * @notice This function is to getting allowance of spender.
@@ -639,8 +578,8 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
         //indicates if fee should be deducted from transfer
         bool takeFee = true;
         
-        //if from address is not in TimeLockFromAddress list, not taking fee
-        if(!_isTimeLockFromAddress[from]){
+        //if from address is not in SwapAddress list, not taking fee
+        if(!_isSwapAddress[from]){
             takeFee = false;
         }
         
@@ -657,52 +596,6 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
 
         //it will calculate timelock
         _afterTokenTransferBase(from, to, amount);
-    }
-
-    /**
-    * @dev Internal function of transfer for vesting contract.
-    */
-    function _transferForVesting(
-        address from,
-        address to,
-        uint256 amount
-    ) private {
-        require(from != address(0), "ERC20: transfer from the zero address");
-        require(to != address(0), "ERC20: transfer to the zero address");
-        require(amount > 0, "Transfer amount must be greater than zero");
-        if(from != owner() && to != owner())
-            require(amount <= _maxTxAmount, "Transfer amount exceeds the maxTxAmount.");
-
-        uint256 senderBalance = balanceOf(from);
-        require(senderBalance >= amount, "ERC20: transfer amount exceeds balance");
-        
-        //it will check timelock
-        _beforeTokenTransferBase(from, amount);
-        
-        //transfer amount, set takefee as false
-        
-        _tokenTransfer(from,to,amount,false);
-
-        //it will calculate timelock
-        _afterTokenTransferBase(from, to, amount);
-        
-    }
-
-    /**
-    * @dev Internal function of transferByVestingC.
-    */
-    function _transferByVestingC(
-        address from,
-        address to,
-        uint256 amount
-    ) private {
-        require(from != address(0), "ERC20: transfer from the zero address");
-        require(to != address(0), "ERC20: transfer to the zero address");
-        require(amount > 0, "Transfer amount must be greater than zero");
-        uint256 senderBalance = balanceOf(from);
-        require(senderBalance >= amount, "ERC20: transfer amount exceeds balance");
-        
-        _tokenTransfer(from,to,amount,false);
     }
 
     /**
@@ -846,29 +739,29 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
     /**
     * @notice getting the list of addresses set as applying timelock from. All tokens transfered from addresses of this list is time locked by proper logic.
     */ 
-    function getTimeLockFromAddress() public view returns (address[] memory){
-        return _timeLockFromAddresses;
+    function getSwapAddress() public view returns (address[] memory){
+        return _swapAddresses;
     }
 
     /**
-    * @notice add time lock address
+    * @notice add swap address
     */ 
-    function addTimeLockFromAddress(address account) public onlyOwner whenNotPaused {
-        require(!_isTimeLockFromAddress[account], "Account is already in list of from addresses for timelock");
-        _isTimeLockFromAddress[account] = true;        
-        _timeLockFromAddresses.push(account);
+    function addSwapAddress(address account) public onlyOwner whenNotPaused {
+        require(!_isSwapAddress[account], "Account is already in list of swap addresses");
+        _isSwapAddress[account] = true;        
+        _swapAddresses.push(account);
     }
 
     /**
-    * @notice remove time lock address
+    * @notice remove swap address
     */ 
-    function removeTimeLockFromAddress(address account) public onlyOwner whenNotPaused {
-        require(_isTimeLockFromAddress[account] == true, "Account is not in list of from addresses for timelock");
-        for (uint256 i = 0; i < _timeLockFromAddresses.length; i++) {
-            if (_timeLockFromAddresses[i] == account) {
-                _timeLockFromAddresses[i] = _timeLockFromAddresses[_timeLockFromAddresses.length - 1];
-                _isTimeLockFromAddress[account] = false;
-                _timeLockFromAddresses.pop();
+    function removeSwapAddress(address account) public onlyOwner whenNotPaused {
+        require(_isSwapAddress[account] == true, "Account is not in list of swap addresses");
+        for (uint256 i = 0; i < _swapAddresses.length; i++) {
+            if (_swapAddresses[i] == account) {
+                _swapAddresses[i] = _swapAddresses[_swapAddresses.length - 1];
+                _isSwapAddress[account] = false;
+                _swapAddresses.pop();
                 break;
             }
         }
@@ -931,7 +824,7 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
         address to,
         uint256 amount
     ) private {
-        if(!_isTimeLockFromAddress[from]) return;
+        if(!_isSwapAddress[from]) return;
         LockFund[] storage lockFunds = _lockFundsArray[to];
         lockFunds.push(LockFund(amount.div(10), block.timestamp + 1 days));
         for (uint256 i = 1; i < 10; i++) {

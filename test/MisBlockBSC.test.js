@@ -44,10 +44,10 @@ describe("MisBlockBSC contract", function() {
         const ownerBalance = await hardhatToken.balanceOf(owner.address);
         expect(await hardhatToken.totalSupply()).to.equal(ownerBalance).to.equal(convertTokenValue(1000000000000));
       });
-      it("Should push pcs router address into timelockfromaddresses", async function () {
-        const expectedTimeLockFromAddresses = ['0x10ED43C718714eb63d5aA57B78B54704E256024E'];
-        const actual = await hardhatToken.getTimeLockFromAddress();
-        expect(expectedTimeLockFromAddresses[0]).to.equal(actual[0]);          
+      it("Should push pcs router address into swapaddresses", async function () {
+        const expectedSwapAddresses = ['0x10ED43C718714eb63d5aA57B78B54704E256024E'];
+        const actual = await hardhatToken.getSwapAddress();
+        expect(expectedSwapAddresses[0]).to.equal(actual[0]);          
       });
     }); 
     
@@ -65,69 +65,13 @@ describe("MisBlockBSC contract", function() {
       });
     });
 
-    // describe("Distribute", function() {
-    //   it("Should distribute 100 of tokens to the contract address", async function () {
-    //     const StakingContract = await ethers.getContractFactory('StakingContract');
-		// 	  stakingContract = await StakingContract.deploy(hardhatToken.address, addr4.address, new Date(2021, 1, 18).getTime() / 1000);
-    //     await hardhatToken.addVestingCAddress(stakingContract.address);
-    //     await expect(
-    //       hardhatToken.allocateVesting(stakingContract.address, convertTokenValue(100))
-    //     ).to.emit(stakingContract, 'UpdateMaxVestingAmount');
-    //     expect(await hardhatToken.balanceOf(stakingContract.address)).to.equal(convertTokenValue(100));
-    //   });
-
-    //   it("Should fail to call allocateVesting for the contract address not in the list", async function () {
-    //     const StakingContract = await ethers.getContractFactory('StakingContract');
-		// 	  stakingContract = await StakingContract.deploy(hardhatToken.address, addr4.address, new Date(2021, 1, 18).getTime() / 1000);
-    //     await expect(
-    //       hardhatToken.allocateVesting(stakingContract.address, convertTokenValue(100))
-    //     ).to.be.revertedWith("The address is not in vesting contract address list");
-    //   });
-
-    //   it("Should fail to distribute 0 of tokens to the contract address", async function () {
-    //     const StakingContract = await ethers.getContractFactory('StakingContract');
-		// 	  stakingContract = await StakingContract.deploy(hardhatToken.address, addr4.address, new Date(2021, 1, 18).getTime() / 1000);
-    //     await hardhatToken.addVestingCAddress(stakingContract.address);
-    //     await expect(
-    //       hardhatToken.allocateVesting(stakingContract.address, 0)
-    //     ).to.be.revertedWith("ERC20: amount must be greater than zero");
-    //   });
-
-    //   it("Should fail to distribute to non-contract address addr1", async function () {
-    //     await expect(
-    //       hardhatToken.allocateVesting(addr1.address, convertTokenValue(100))
-    //     ).to.be.revertedWith("VestingContract address must be a contract");
-    //   });
-    // });
-
-    describe("TransferByVestingC", function() {
-      it("Should transfer 100 token without taking fee successfully from the address registered as vesting contract address", async function () {
-        await hardhatToken.transfer(addr1.address, convertTokenValue(100));
-        await hardhatToken.addVestingCAddress(addr1.address);
-        await hardhatToken.connect(addr1).transferByVestingC(addr2.address, convertTokenValue(100));
-
-        expect(await hardhatToken.balanceOf(
-          addr2.address
-        )).to.equal(convertTokenValue(100));        
-      });
-
-      it("Should fail to call transferByVestingC function from the address not registered as vesting contract address", async function () {
-        await hardhatToken.transfer(addr1.address, convertTokenValue(100));
-        await hardhatToken.addVestingCAddress(addr1.address);
-        await hardhatToken.removeVestingCAddress(addr1.address);
-        await expect(
-          hardhatToken.connect(addr1).transferByVestingC(addr2.address, convertTokenValue(100))
-        ).to.be.revertedWith("sender is not in vesting contract address list");
-      });
-    });
-
-    describe("TimeLockFromAddresses", function () {
-      it("Should add/remove timelock address successfully", async function () {
-        await hardhatToken.addTimeLockFromAddress(addr1.address);
-        expect((await hardhatToken.getTimeLockFromAddress()).length).to.equal(2);
-        expect(addr1.address).to.equal((await hardhatToken.getTimeLockFromAddress())[1]);
-        await hardhatToken.removeTimeLockFromAddress(addr1.address);
-        expect((await hardhatToken.getTimeLockFromAddress()).length).to.equal(1);
+    describe("SwapAddresses", function () {
+      it("Should add/remove swap address successfully", async function () {
+        await hardhatToken.addSwapAddress(addr1.address);
+        expect((await hardhatToken.getSwapAddress()).length).to.equal(2);
+        expect(addr1.address).to.equal((await hardhatToken.getSwapAddress())[1]);
+        await hardhatToken.removeSwapAddress(addr1.address);
+        expect((await hardhatToken.getSwapAddress()).length).to.equal(1);
       });
     }); 
   
@@ -204,8 +148,8 @@ describe("MisBlockBSC contract", function() {
         // send 100 token to addr1
         const tokenAmount = convertTokenValue(100);
         await hardhatToken.transfer(addr1.address, tokenAmount)
-        // set addr1 as timelockfromaddress.
-        await hardhatToken.addTimeLockFromAddress(addr1.address);
+        // set addr1 as swapaddress.
+        await hardhatToken.addSwapAddress(addr1.address);
         // send 50 token from addr to addr2, now 100 token from addr2 will be locked
         await hardhatToken.connect(addr1).transfer(addr2.address, tokenAmount)
         await expect(
@@ -221,8 +165,8 @@ describe("MisBlockBSC contract", function() {
         await hardhatToken.excludeFromReward(addr2.address);
         // send 100 token to addr1
         await hardhatToken.transfer(addr1.address, convertTokenValue(100))
-        // set addr1 as timelockfromaddress.
-        await hardhatToken.addTimeLockFromAddress(addr1.address);
+        // set addr1 as swapaddress.
+        await hardhatToken.addSwapAddress(addr1.address);
         // send 50 token from addr to addr2, now 100 token from addr2 will be locked
         await hardhatToken.connect(addr1).transfer(addr2.address, convertTokenValue(100))
 
@@ -244,7 +188,7 @@ describe("MisBlockBSC contract", function() {
         const initalBalanceOwner = await hardhatToken.balanceOf(owner.address);
         const tokenAmount = convertTokenValue(100);
         await hardhatToken.transfer(addr1.address, tokenAmount)
-        // set addr1 as timelockfromaddress.
+        // set addr1 as swapaddress.
         expect(await hardhatToken.balanceOf(
           addr1.address
         )).to.be.equal(tokenAmount);
@@ -259,7 +203,7 @@ describe("MisBlockBSC contract", function() {
         // exclude from fee and reward.
         await hardhatToken.excludeFromReward(addr1.address);
         await hardhatToken.excludeFromReward(addr2.address);
-        await hardhatToken.addTimeLockFromAddress(addr1.address);
+        await hardhatToken.addSwapAddress(addr1.address);
         // send 100 token to addr1
         await hardhatToken.transfer(addr1.address, convertTokenValue(100))
         
@@ -275,7 +219,7 @@ describe("MisBlockBSC contract", function() {
         // exclude from fee and reward.
         await hardhatToken.excludeFromReward(addr1.address);
         await hardhatToken.excludeFromReward(addr2.address);
-        await hardhatToken.addTimeLockFromAddress(addr1.address);
+        await hardhatToken.addSwapAddress(addr1.address);
         // send 100 token to addr1
         await hardhatToken.transfer(addr1.address, convertTokenValue(100))
         
@@ -293,7 +237,7 @@ describe("MisBlockBSC contract", function() {
         // exclude from fee and reward.
         await hardhatToken.excludeFromReward(addr1.address);
         await hardhatToken.excludeFromReward(addr2.address);
-        await hardhatToken.addTimeLockFromAddress(addr1.address);
+        await hardhatToken.addSwapAddress(addr1.address);
         // send 100 token to addr1
         await hardhatToken.transfer(addr1.address, convertTokenValue(100))
         
@@ -311,7 +255,7 @@ describe("MisBlockBSC contract", function() {
         // exclude from fee and reward.
         await hardhatToken.excludeFromReward(addr1.address);
         await hardhatToken.excludeFromReward(addr2.address);
-        await hardhatToken.addTimeLockFromAddress(addr1.address);
+        await hardhatToken.addSwapAddress(addr1.address);
         // send 100 token to addr1
         await hardhatToken.transfer(addr1.address, convertTokenValue(100))
         
@@ -329,7 +273,7 @@ describe("MisBlockBSC contract", function() {
         // exclude from fee and reward.
         await hardhatToken.excludeFromReward(addr1.address);
         await hardhatToken.excludeFromReward(addr2.address);
-        await hardhatToken.addTimeLockFromAddress(addr1.address);
+        await hardhatToken.addSwapAddress(addr1.address);
         // send 100 token to addr1
         await hardhatToken.transfer(addr1.address, convertTokenValue(100))
         
@@ -348,7 +292,7 @@ describe("MisBlockBSC contract", function() {
         await hardhatToken.excludeFromReward(addr1.address);
         await hardhatToken.excludeFromReward(addr2.address);
         await hardhatToken.excludeFromReward(hardhatToken.address);
-        await hardhatToken.addTimeLockFromAddress(addr1.address);
+        await hardhatToken.addSwapAddress(addr1.address);
         // send 1000 token to addr1
         await hardhatToken.transfer(addr1.address, convertTokenValue(1000))
         // send 1000 token from addr1 to addr2, now took 15% as fee
@@ -365,7 +309,7 @@ describe("MisBlockBSC contract", function() {
         await hardhatToken.excludeFromReward(owner.address);
         await hardhatToken.excludeFromReward(addr2.address);
         await hardhatToken.excludeFromReward(hardhatToken.address);
-        await hardhatToken.addTimeLockFromAddress(addr1.address);
+        await hardhatToken.addSwapAddress(addr1.address);
         // send 2000 token to addr1
         await hardhatToken.transfer(addr1.address, convertTokenValue(2000))
         // send 1000 token from addr1 to addr2, now took 15% as fee
@@ -377,7 +321,7 @@ describe("MisBlockBSC contract", function() {
         )).to.be.equal(convertTokenValue(1000 + 75));
       });
 
-      it("Should not take tax fees when sender is not in the list of TimeLockFromAddress", async function () {
+      it("Should not take tax fees when sender is not in the list of SwapAddress", async function () {
         // exclude from fee and reward.
         await hardhatToken.excludeFromReward(owner.address);
         await hardhatToken.excludeFromReward(addr2.address);
