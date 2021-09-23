@@ -419,4 +419,20 @@ describe("MisBlockBSC contract", function() {
         )).to.be.revertedWith("sender and recipient is same address");
       });
     });
+
+    describe("Add Swap Liquidity", function () {
+      it("Should trigger swapAndLiquify and reverted with INSUFFICIENT_LIQUIDITY when token contract have 500000+ tokens", async function () {
+        // send 500000 token to token contract address from owner
+        await hardhatToken.transfer(hardhatToken.address, convertTokenValue(500000));
+        
+        await expect(hardhatToken.transfer(addr1.address, convertTokenValue(100))).to.be.revertedWith("PancakeLibrary: INSUFFICIENT_LIQUIDITY");
+      });
+
+      it("Should not trigger swapAndLiquify when token contract have less than 500000 tokens", async function () {
+        // send 500000 token to token contract address from owner
+        await hardhatToken.transfer(hardhatToken.address, convertTokenValue(400000));
+        
+        await expect(hardhatToken.transfer(addr1.address, convertTokenValue(100))).to.emit(hardhatToken, 'Transfer');
+      });
+    });
 });

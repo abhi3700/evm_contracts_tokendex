@@ -12,8 +12,8 @@ module.exports = {
   networks: {
     hardhat: {
       forking: {
-        //url: `https://mainnet.infura.io/v3/${INFURA_API_KEY}`,
-        url: `https://speedy-nodes-nyc.moralis.io/${SPEEDY_NODE_KEY}/bsc/mainnet/archive`,
+        url: `https://mainnet.infura.io/v3/${INFURA_API_KEY}`,
+        //url: `https://speedy-nodes-nyc.moralis.io/${SPEEDY_NODE_KEY}/bsc/mainnet/archive`,
       }
     },
     rinkeby: {

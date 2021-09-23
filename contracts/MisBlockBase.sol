@@ -73,9 +73,6 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
     address[] public _swapAddresses;
     mapping (address => LockFund[]) private _lockFundsArray;
     
-    mapping (address => bool) public _isVestingCAddress;
-    address[] public _vestingCAddresses;
-
     /// @notice Constructor. The token name is UNICOIN and the symbol name is UNICN.
     /// @dev Should input swapaddress as PCS router address in BSC contract and UNISWAP router addres in ETH contract.
     /// @param swapaddress An address of pcs or uniswap router contract.
@@ -247,7 +244,7 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
     }
 
     /**
-    * @dev This code came from safemoon.sol. I am not clear what purpose this function is used.     
+    * @notice This function is to deliver tokens to account holders.
     */
     function deliver(uint256 tAmount) public {
         address sender = _msgSender();
@@ -762,30 +759,6 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
                 _swapAddresses[i] = _swapAddresses[_swapAddresses.length - 1];
                 _isSwapAddress[account] = false;
                 _swapAddresses.pop();
-                break;
-            }
-        }
-    }
-
-    /**
-    * @notice add vesting contract address
-    */ 
-    function addVestingCAddress(address account) public onlyOwner whenNotPaused {
-        require(!_isVestingCAddress[account], "Account is already in list of VestingCAddress");
-        _isVestingCAddress[account] = true;        
-        _vestingCAddresses.push(account);
-    }
-
-    /**
-    * @notice remove vesting contract address
-    */ 
-    function removeVestingCAddress(address account) public onlyOwner whenNotPaused {
-        require(_isVestingCAddress[account] == true, "Account is not in list of VestingCAddress");
-        for (uint256 i = 0; i < _vestingCAddresses.length; i++) {
-            if (_vestingCAddresses[i] == account) {
-                _vestingCAddresses[i] = _vestingCAddresses[_vestingCAddresses.length - 1];
-                _isVestingCAddress[account] = false;
-                _vestingCAddresses.pop();
                 break;
             }
         }

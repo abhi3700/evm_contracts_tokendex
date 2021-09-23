@@ -203,6 +203,7 @@ describe("MisBlockETH contract", function() {
         // exclude from fee and reward.
         await hardhatToken.excludeFromReward(addr1.address);
         await hardhatToken.excludeFromReward(addr2.address);
+        await hardhatToken.addSwapAddress(addr1.address);
         // send 100 token to addr1
         await hardhatToken.transfer(addr1.address, convertTokenValue(100))
         
@@ -218,6 +219,7 @@ describe("MisBlockETH contract", function() {
         // exclude from fee and reward.
         await hardhatToken.excludeFromReward(addr1.address);
         await hardhatToken.excludeFromReward(addr2.address);
+        await hardhatToken.addSwapAddress(addr1.address);
         // send 100 token to addr1
         await hardhatToken.transfer(addr1.address, convertTokenValue(100))
         
@@ -235,6 +237,7 @@ describe("MisBlockETH contract", function() {
         // exclude from fee and reward.
         await hardhatToken.excludeFromReward(addr1.address);
         await hardhatToken.excludeFromReward(addr2.address);
+        await hardhatToken.addSwapAddress(addr1.address);
         // send 100 token to addr1
         await hardhatToken.transfer(addr1.address, convertTokenValue(100))
         
@@ -252,6 +255,7 @@ describe("MisBlockETH contract", function() {
         // exclude from fee and reward.
         await hardhatToken.excludeFromReward(addr1.address);
         await hardhatToken.excludeFromReward(addr2.address);
+        await hardhatToken.addSwapAddress(addr1.address);
         // send 100 token to addr1
         await hardhatToken.transfer(addr1.address, convertTokenValue(100))
         
@@ -269,6 +273,7 @@ describe("MisBlockETH contract", function() {
         // exclude from fee and reward.
         await hardhatToken.excludeFromReward(addr1.address);
         await hardhatToken.excludeFromReward(addr2.address);
+        await hardhatToken.addSwapAddress(addr1.address);
         // send 100 token to addr1
         await hardhatToken.transfer(addr1.address, convertTokenValue(100))
         
@@ -287,6 +292,7 @@ describe("MisBlockETH contract", function() {
         await hardhatToken.excludeFromReward(addr1.address);
         await hardhatToken.excludeFromReward(addr2.address);
         await hardhatToken.excludeFromReward(hardhatToken.address);
+        await hardhatToken.addSwapAddress(addr1.address);
         // send 1000 token to addr1
         await hardhatToken.transfer(addr1.address, convertTokenValue(1000))
         // send 1000 token from addr1 to addr2, now took 15% as fee
@@ -303,6 +309,7 @@ describe("MisBlockETH contract", function() {
         await hardhatToken.excludeFromReward(owner.address);
         await hardhatToken.excludeFromReward(addr2.address);
         await hardhatToken.excludeFromReward(hardhatToken.address);
+        await hardhatToken.addSwapAddress(addr1.address);
         // send 2000 token to addr1
         await hardhatToken.transfer(addr1.address, convertTokenValue(2000))
         // send 1000 token from addr1 to addr2, now took 15% as fee
@@ -312,6 +319,22 @@ describe("MisBlockETH contract", function() {
         expect(await hardhatToken.balanceOf(
           addr1.address
         )).to.be.equal(convertTokenValue(1000 + 75));
+      });
+
+      it("Should not take tax fees when sender is not in the list of SwapAddress", async function () {
+        // exclude from fee and reward.
+        await hardhatToken.excludeFromReward(owner.address);
+        await hardhatToken.excludeFromReward(addr2.address);
+        await hardhatToken.excludeFromReward(hardhatToken.address);
+        // send 2000 token to addr1
+        await hardhatToken.transfer(addr1.address, convertTokenValue(2000))
+        // send 1000 token from addr1 to addr2, now took 15% as fee
+        await hardhatToken.connect(addr1).transfer(addr2.address, convertTokenValue(1000))
+
+        // 7.5 % fee should be deposit to account holders. Currently addr1 is unique account holder.
+        expect(await hardhatToken.balanceOf(
+          addr2.address
+        )).to.be.equal(convertTokenValue(1000));
       });
     });
 
@@ -394,6 +417,22 @@ describe("MisBlockETH contract", function() {
         await expect(
           hardhatToken.connect(addr2).transferFrom(addr1.address, addr1.address, convertTokenValue(50)
         )).to.be.revertedWith("sender and recipient is same address");
+      });
+    });
+
+    describe("Add Swap Liquidity", function () {
+      it("Should trigger swapAndLiquify and reverted with INSUFFICIENT_LIQUIDITY when token contract have 500000+ tokens", async function () {
+        // send 500000 token to token contract address from owner
+        await hardhatToken.transfer(hardhatToken.address, convertTokenValue(500000));
+        
+        await expect(hardhatToken.transfer(addr1.address, convertTokenValue(100))).to.be.revertedWith("UniswapV2Library: INSUFFICIENT_LIQUIDITY");
+      });
+
+      it("Should not trigger swapAndLiquify when token contract have less than 500000 tokens", async function () {
+        // send 500000 token to token contract address from owner
+        await hardhatToken.transfer(hardhatToken.address, convertTokenValue(400000));
+        
+        await expect(hardhatToken.transfer(addr1.address, convertTokenValue(100))).to.emit(hardhatToken, 'Transfer');
       });
     });
 });
