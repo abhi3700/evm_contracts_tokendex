@@ -132,3 +132,4 @@ dist
 
 # cloudbuild
 /etc
+package-lock.json
