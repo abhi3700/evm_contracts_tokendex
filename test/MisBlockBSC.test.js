@@ -46,7 +46,7 @@ describe("MisBlockBSC contract", function() {
       });
       it("Should push pcs router address into swapaddresses", async function () {
         const expectedSwapAddresses = ['0x10ED43C718714eb63d5aA57B78B54704E256024E'];
-        const actual = await hardhatToken.getSwapAddress();
+        const actual = await hardhatToken.getSwapAddresseses();
         expect(expectedSwapAddresses[0]).to.equal(actual[0]);          
       });
     }); 
@@ -68,10 +68,10 @@ describe("MisBlockBSC contract", function() {
     describe("SwapAddresses", function () {
       it("Should add/remove swap address successfully", async function () {
         await hardhatToken.addSwapAddress(addr1.address);
-        expect((await hardhatToken.getSwapAddress()).length).to.equal(2);
-        expect(addr1.address).to.equal((await hardhatToken.getSwapAddress())[1]);
+        expect((await hardhatToken.getSwapAddresses()).length).to.equal(2);
+        expect(addr1.address).to.equal((await hardhatToken.getSwapAddresses())[1]);
         await hardhatToken.removeSwapAddress(addr1.address);
-        expect((await hardhatToken.getSwapAddress()).length).to.equal(1);
+        expect((await hardhatToken.getSwapAddresses()).length).to.equal(1);
       });
     }); 
   

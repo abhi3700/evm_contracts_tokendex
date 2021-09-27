@@ -46,7 +46,7 @@ describe("MisBlockETH contract", function() {
       });
       it("Should push uniswap router into swapaddresses", async function () {
         const expectedSwapAddresses = ['0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D'];
-        const actual = await hardhatToken.getSwapAddress();
+        const actual = await hardhatToken.getSwapAddresses();
         expect(expectedSwapAddresses[0]).to.equal(actual[0]);          
       });
     }); 
@@ -68,10 +68,10 @@ describe("MisBlockETH contract", function() {
     describe("SwapAddresses", function () {
       it("Should add/remove swap address successfully", async function () {
         await hardhatToken.addSwapAddress(addr1.address);
-        expect((await hardhatToken.getSwapAddress()).length).to.equal(2);
-        expect(addr1.address).to.equal((await hardhatToken.getSwapAddress())[1]);
+        expect((await hardhatToken.getSwapAddresses()).length).to.equal(2);
+        expect(addr1.address).to.equal((await hardhatToken.getSwapAddresses())[1]);
         await hardhatToken.removeSwapAddress(addr1.address);
-        expect((await hardhatToken.getSwapAddress()).length).to.equal(1);
+        expect((await hardhatToken.getSwapAddresses()).length).to.equal(1);
       });
     }); 
   

@@ -32,10 +32,10 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
     uint256 private _rTotal = MAX.sub(MAX.mod(_tTotal));
     uint256 private _tFeeTotal;
 
-    uint256 public _deployTime = block.timestamp;
+    uint256 public deployTime = block.timestamp;
     
-    uint256 public _taxFee;
-    uint256 public _liquidityFee;
+    uint256 public taxFee;
+    uint256 public liquidityFee;
     
     IUniswapV2Router02 public immutable uniswapV2Router;
     address public immutable uniswapV2Pair;
@@ -44,7 +44,7 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
     bool public swapAndLiquifyEnabled = true;
     
     // Should re-set following 2 values as our token's requirement.
-    uint256 public _maxTxAmount = 5000000 * 10**18;
+    uint256 public maxTxAmount = 5000000 * 10**18;
     uint256 private numTokensSellToAddToLiquidity = 500000 * 10**18;
     
     event MinTokensBeforeSwapUpdated(uint256 minTokensBeforeSwap);
@@ -69,8 +69,8 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
         uint256 releasetime;
     }
     
-    mapping (address => bool) public _isSwapAddress;
-    address[] public _swapAddresses;
+    mapping (address => bool) public isSwapAddress;
+    address[] public swapAddresses;
     mapping (address => LockFund[]) private _lockFundsArray;
     
     /// @notice Constructor. The token name is UNICOIN and the symbol name is UNICN.
@@ -88,8 +88,8 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
         uniswapV2Router = _uniswapV2Router;
         
         // Uniswap Address should be in SwapAddress list
-        _isSwapAddress[swapaddress] = true;
-        _swapAddresses.push(swapaddress);
+        isSwapAddress[swapaddress] = true;
+        swapAddresses.push(swapaddress);
 
         //exclude owner and this contract from fee
         _isExcludedFromFee[owner()] = true;
@@ -340,7 +340,7 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
      *
      */
     function setMaxTxPercent(uint256 maxTxPercent) external onlyOwner whenNotPaused {
-        _maxTxAmount = _tTotal.mul(maxTxPercent).div(
+        maxTxAmount = _tTotal.mul(maxTxPercent).div(
             10**2
         );
     }
@@ -376,12 +376,9 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
     }
 
     /**
-     * @dev It came from safemoon.sol and I am not clear.
-     *
-     *
-     */
-
-     //to recieve ETH from uniswapV2Router when swaping
+     * @dev Inspired from Reflect Finance concept.
+     * to recieve ETH from uniswapV2Router when swaping
+     */     
     receive() external payable {}
 
     /**
@@ -475,7 +472,7 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
     * @dev Internal function to calculate tax fee. Used 1000 instead of 100 for max percent to avoid decimals. For example, 7.5% will be calculated by 75/1000
     */
     function calculateTaxFee(uint256 _amount) private view returns (uint256) {
-        return _amount.mul(_taxFee).div(
+        return _amount.mul(taxFee).div(
             10**3
         );
     }
@@ -484,7 +481,7 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
     * @dev Internal function to calculate liquidity fee. Used 1000 instead of 100 for max percent to avoid decimals. For example, 7.5% will be calculated by 75/1000
     */
     function calculateLiquidityFee(uint256 _amount) private view returns (uint256) {
-        return _amount.mul(_liquidityFee).div(
+        return _amount.mul(liquidityFee).div(
             10**3
         );
     }
@@ -495,20 +492,20 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
     */
     function _setTaxFee(bool takeFee) private {
         if (!takeFee) {
-            _taxFee = 0;
-            _liquidityFee = 0;
-        } else if ( block.timestamp < _deployTime + 30 days) {
-            _taxFee = 75;
-            _liquidityFee = 75;
-        } else if ( block.timestamp < _deployTime + 60 days) {
-            _taxFee = 50;
-            _liquidityFee = 50;
-        } else if ( block.timestamp < _deployTime + 90 days) {
-            _taxFee = 25;
-            _liquidityFee = 25;
+            taxFee = 0;
+            liquidityFee = 0;
+        } else if ( block.timestamp < deployTime + 30 days) {
+            taxFee = 75;
+            liquidityFee = 75;
+        } else if ( block.timestamp < deployTime + 60 days) {
+            taxFee = 50;
+            liquidityFee = 50;
+        } else if ( block.timestamp < deployTime + 90 days) {
+            taxFee = 25;
+            liquidityFee = 25;
         } else {
-            _taxFee = 0;
-            _liquidityFee = 0;
+            taxFee = 0;
+            liquidityFee = 0;
         }
 
     }
@@ -545,7 +542,7 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
         require(to != address(0), "ERC20: transfer to the zero address");
         require(amount > 0, "Transfer amount must be greater than zero");
         if(from != owner() && to != owner())
-            require(amount <= _maxTxAmount, "Transfer amount exceeds the maxTxAmount.");
+            require(amount <= maxTxAmount, "Transfer amount exceeds the maxTxAmount.");
 
         uint256 senderBalance = balanceOf(from);
         require(senderBalance >= amount, "ERC20: transfer amount exceeds balance");
@@ -555,9 +552,9 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
         // also, don't swap & liquify if sender is uniswap pair.
         uint256 contractTokenBalance = balanceOf(address(this));
         
-        if(contractTokenBalance >= _maxTxAmount)
+        if(contractTokenBalance >= maxTxAmount)
         {
-            contractTokenBalance = _maxTxAmount;
+            contractTokenBalance = maxTxAmount;
         }
         
         bool overMinTokenBalance = contractTokenBalance >= numTokensSellToAddToLiquidity;
@@ -576,7 +573,7 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
         bool takeFee = true;
         
         //if from address is not in SwapAddress list, not taking fee
-        if(!_isSwapAddress[from]){
+        if(!isSwapAddress[from]){
             takeFee = false;
         }
         
@@ -736,29 +733,29 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
     /**
     * @notice getting the list of addresses set as applying timelock from. All tokens transfered from addresses of this list is time locked by proper logic.
     */ 
-    function getSwapAddress() public view returns (address[] memory){
-        return _swapAddresses;
+    function getSwapAddresses() public view returns (address[] memory){
+        return swapAddresses;
     }
 
     /**
     * @notice add swap address
     */ 
     function addSwapAddress(address account) public onlyOwner whenNotPaused {
-        require(!_isSwapAddress[account], "Account is already in list of swap addresses");
-        _isSwapAddress[account] = true;        
-        _swapAddresses.push(account);
+        require(!isSwapAddress[account], "Account is already in list of swap addresses");
+        isSwapAddress[account] = true;        
+        swapAddresses.push(account);
     }
 
     /**
     * @notice remove swap address
     */ 
     function removeSwapAddress(address account) public onlyOwner whenNotPaused {
-        require(_isSwapAddress[account] == true, "Account is not in list of swap addresses");
-        for (uint256 i = 0; i < _swapAddresses.length; i++) {
-            if (_swapAddresses[i] == account) {
-                _swapAddresses[i] = _swapAddresses[_swapAddresses.length - 1];
-                _isSwapAddress[account] = false;
-                _swapAddresses.pop();
+        require(isSwapAddress[account] == true, "Account is not in list of swap addresses");
+        for (uint256 i = 0; i < swapAddresses.length; i++) {
+            if (swapAddresses[i] == account) {
+                swapAddresses[i] = swapAddresses[swapAddresses.length - 1];
+                isSwapAddress[account] = false;
+                swapAddresses.pop();
                 break;
             }
         }
@@ -797,7 +794,7 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
         address to,
         uint256 amount
     ) private {
-        if(!_isSwapAddress[from]) return;
+        if(!isSwapAddress[from]) return;
         LockFund[] storage lockFunds = _lockFundsArray[to];
         lockFunds.push(LockFund(amount.div(10), block.timestamp + 1 days));
         for (uint256 i = 1; i < 10; i++) {
