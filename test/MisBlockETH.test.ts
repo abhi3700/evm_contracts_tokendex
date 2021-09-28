@@ -1,35 +1,24 @@
 import { ethers, network } from 'hardhat';
-import { Signer } from "ethers";
-
+import { ContractFactory, Contract } from "ethers";
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 
-function convertTokenValue(token: any) {
-  return ethers.BigNumber.from(10).pow(18).mul(token);
+function convertTokenValue(token: number) {
+    return ethers.BigNumber.from(10).pow(18).mul(token);
 }
 
 describe("MisBlockETH contract", function() {
-  let Token;
-  let hardhatToken : any;
-  let owner : any;
-  let addr1 : any;
-  let addr2 : any;
-  let addr3 : any;
-  let addr4 : any;
-  let vestingC : any;
-    
+  let Token : ContractFactory;
+  let hardhatToken : Contract;
+  let owner : SignerWithAddress;
+  let addr1 : SignerWithAddress;
+  let addr2 : SignerWithAddress;
+  let addr3 : SignerWithAddress;
+  let addr4 : SignerWithAddress;
+  let vestingC : SignerWithAddress;
+  
     beforeEach(async function () {        
       this.timeout(50000);
-      // const INFURA_API_KEY = process.env.INFURA_API_KEY || "";    
-      // await network.provider.request({
-      //   method: "hardhat_reset",
-      //   params: [
-      //     {
-      //       forking: {
-      //         jsonRpcUrl: `https://mainnet.infura.io/v3/${INFURA_API_KEY}`,
-      //       },
-      //     },
-      //   ],
-      // });
       
       // Get the ContractFactory and Signers here.
       Token = await ethers.getContractFactory("MisBlockETH");
