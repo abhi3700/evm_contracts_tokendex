@@ -1,3 +1,4 @@
+import { ethers } from 'hardhat';
 
 async function main() {
     
@@ -10,7 +11,7 @@ async function main() {
   
     console.log("Account balance:", (await deployer.getBalance()).toString());
   
-    const Token = await ethers.getContractFactory("MisBlockETH");
+    const Token = await ethers.getContractFactory("MisBlockBSC");
     const token = await Token.deploy();
     await token.deployed();
   

@@ -1,4 +1,8 @@
-require('dotenv').config();
+import * as dotenv from "dotenv";
+import { ethers, network } from 'hardhat';
+
+dotenv.config();
+
 const INFURA_API_KEY = process.env.INFURA_API_KEY || "";
 
 async function main() {

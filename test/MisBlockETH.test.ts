@@ -1,18 +1,21 @@
-const { expect } = require("chai");
+import { ethers, network } from 'hardhat';
+import { Signer } from "ethers";
 
-function convertTokenValue(token) {
-    return ethers.BigNumber.from(10).pow(18).mul(token);
+import { expect } from 'chai';
+
+function convertTokenValue(token: any) {
+  return ethers.BigNumber.from(10).pow(18).mul(token);
 }
 
 describe("MisBlockETH contract", function() {
-    let Token;
-    let hardhatToken;
-    let owner;
-    let addr1;
-    let addr2;
-    let addr3;
-    let addr4;
-    let vestingC;
+  let Token;
+  let hardhatToken : any;
+  let owner : any;
+  let addr1 : any;
+  let addr2 : any;
+  let addr3 : any;
+  let addr4 : any;
+  let vestingC : any;
     
     beforeEach(async function () {        
       this.timeout(50000);
