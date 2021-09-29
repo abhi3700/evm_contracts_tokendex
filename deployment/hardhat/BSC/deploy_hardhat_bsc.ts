@@ -1,4 +1,8 @@
-require('dotenv').config();
+import * as dotenv from "dotenv";
+import { ethers, network } from 'hardhat';
+
+dotenv.config();
+
 const SPEEDY_NODE_KEY = process.env.SPEEDY_NODE_KEY || "";
 
 async function main() {

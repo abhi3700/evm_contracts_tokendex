@@ -1,33 +1,25 @@
-const { expect } = require("chai");
+import { ethers, network } from 'hardhat';
+import { ContractFactory, Contract } from "ethers";
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { expect } from 'chai';
 
-function convertTokenValue(token) {
+function convertTokenValue(token: number) {
     return ethers.BigNumber.from(10).pow(18).mul(token);
 }
 
 describe("MisBlockBSC contract", function() {
-    let Token;
-    let hardhatToken;
-    let owner;
-    let addr1;
-    let addr2;
-    let addr3;
-    let addr4;
-    let vestingC;
+    let Token : ContractFactory;
+    let hardhatToken : Contract;
+    let owner : SignerWithAddress;
+    let addr1 : SignerWithAddress;
+    let addr2 : SignerWithAddress;
+    let addr3 : SignerWithAddress;
+    let addr4 : SignerWithAddress;
+    let vestingC : SignerWithAddress;
     
     beforeEach(async function () {
         this.timeout(50000);
-        // const SPEEDY_NODE_KEY = process.env.SPEEDY_NODE_KEY || "";
-        // await network.provider.request({
-        //   method: "hardhat_reset",
-        //   params: [
-        //     {
-        //       forking: {
-        //         jsonRpcUrl: `https://speedy-nodes-nyc.moralis.io/${SPEEDY_NODE_KEY}/bsc/mainnet/archive`,
-        //       },
-        //     },
-        //   ],
-        // });
-    
+        
         // Get the ContractFactory and Signers here.
         Token = await ethers.getContractFactory("MisBlockBSC");
         [owner, addr1, addr2, addr3, addr4, vestingC] = await ethers.getSigners();
