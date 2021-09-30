@@ -133,3 +133,6 @@ dist
 # cloudbuild
 /etc
 package-lock.json
+
+# temp files
+todo
