@@ -1,0 +1,18 @@
+{
+	"Rinkeby": {
+		"contract": "",
+		"name": "UNICN token contract"
+	},
+	"BSC Testnet": {
+		"contract": "",
+		"name": "UNICN token contract"
+	},
+	"ETH Mainnet": {
+		"contract": "",
+		"name": "UNICN token contract"
+	},
+	"BSC Mainnet": {
+		"contract": "",
+		"name": "UNICN token contract"
+	},
+}
