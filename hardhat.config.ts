@@ -1,6 +1,7 @@
 import * as dotenv from "dotenv";
 import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-waffle";
+import "hardhat-gas-reporter";
 
 dotenv.config();
 /**
@@ -45,4 +46,7 @@ module.exports = {
       }
     }
   },
+  gasReporter: {
+    enabled: (process.env.REPORT_GAS) ? true : false
+  }
 };
