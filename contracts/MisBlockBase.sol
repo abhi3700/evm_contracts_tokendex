@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.0;
 
 /// @title A base MisBlock token contract
 /// @author Anderson L
@@ -20,7 +20,7 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
 
     mapping (address => uint256) private _rOwned;
     mapping (address => uint256) private _tOwned;
-    mapping (address => mapping (address => uint256)) private _allowances;
+    mapping (address => mapping (address => uint256)) private _tokenAllowances;
 
     mapping (address => bool) private _isExcludedFromFee;
 
@@ -28,8 +28,8 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
     address[] private _excluded;
    
     uint256 private constant MAX = ~uint256(0) / 1000;
-    uint256 private _tTotal = 1000000000000 * 10**18;
-    uint256 private _rTotal = MAX.sub(MAX.mod(_tTotal));
+    uint256 private _tTotal = 0;
+    uint256 private _rTotal = 0;
     uint256 private _tFeeTotal;
 
     uint256 public deployTime = block.timestamp;
@@ -44,8 +44,8 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
     bool public swapAndLiquifyEnabled = true;
     
     // Should re-set following 2 values as our token's requirement.
-    uint256 public maxTxAmount = 5000000 * 10**18;
-    uint256 private numTokensSellToAddToLiquidity = 500000 * 10**18;
+    uint256 public maxTxAmount = 5000000 ether;
+    uint256 private constant TOKEN_SELL_TO_LIQUIDITY = 500000 ether;
     
     event MinTokensBeforeSwapUpdated(uint256 minTokensBeforeSwap);
     event SwapAndLiquifyEnabledUpdated(bool enabled);
@@ -76,17 +76,12 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
     /// @notice Constructor. The token name is UNICOIN and the symbol name is UNICN.
     /// @dev Should input swapaddress as PCS router address in BSC contract and UNISWAP router addres in ETH contract.
     /// @param swapaddress An address of pcs or uniswap router contract.
-    constructor(address swapaddress) ERC20("UNICOIN", "UNICN") {
+    /// @param initialMintAmount An address of pcs or uniswap router contract.
+    constructor(address swapaddress, uint256 initialMintAmount) ERC20("UNICOIN", "UNICN") {
+        _tTotal = initialMintAmount;
+        _rTotal = MAX.sub(MAX.mod(_tTotal));
         _rOwned[_msgSender()] = _rTotal;
 
-        IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(swapaddress);
-         // Create a uniswap pair for this new token
-        uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory())
-            .createPair(address(this), _uniswapV2Router.WETH());
-
-        // set the rest of the contract variables
-        uniswapV2Router = _uniswapV2Router;
-        
         // Uniswap Address should be in SwapAddress list
         isSwapAddress[swapaddress] = true;
         swapAddresses.push(swapaddress);
@@ -94,7 +89,16 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
         //exclude owner and this contract from fee
         _isExcludedFromFee[owner()] = true;
         _isExcludedFromFee[address(this)] = true;
-        
+
+        IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(swapaddress);
+
+        // set the rest of the contract variables
+        uniswapV2Router = _uniswapV2Router;
+
+         // Create a uniswap pair for this new token
+        uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory())
+            .createPair(address(this), _uniswapV2Router.WETH());
+
         emit Transfer(address(0), _msgSender(), _tTotal);
         
     }
@@ -161,13 +165,13 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
     /**
     * @notice This function is to getting allowance of spender.
     * @dev Returns the remaining number of tokens that `spender` will be
-    * allowed to spend on behalf of `owner` through {transferFrom}. This is
+    * allowed to spend on behalf of `sender` through {transferFrom}. This is
     * zero by default.
     *
     * This value changes when {approve} or {transferFrom} are called.
     */
-    function allowance(address owner, address spender) public view override returns (uint256) {
-        return _allowances[owner][spender];
+    function allowance(address sender, address spender) public view override returns (uint256) {
+        return _tokenAllowances[sender][spender];
     }
 
     /**
@@ -196,7 +200,7 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
     function transferFrom(address sender, address recipient, uint256 amount) public override returns (bool) {
         require(sender != recipient, "sender and recipient is same address");
         _transferBase(sender, recipient, amount);
-        _approveBase(sender, _msgSender(), _allowances[sender][_msgSender()].sub(amount, "ERC20: transfer amount exceeds allowance"));
+        _approveBase(sender, _msgSender(), _tokenAllowances[sender][_msgSender()].sub(amount, "ERC20: transfer amount exceeds allowance"));
         return true;
     }
 
@@ -209,7 +213,7 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
      * Emits an {Approval} event.
      */
     function increaseAllowance(address spender, uint256 addedValue) public override virtual returns (bool) {
-        _approveBase(_msgSender(), spender, _allowances[_msgSender()][spender].add(addedValue));
+        _approveBase(_msgSender(), spender, _tokenAllowances[_msgSender()][spender].add(addedValue));
         return true;
     }
 
@@ -222,7 +226,7 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
      * Emits an {Approval} event.
      */
     function decreaseAllowance(address spender, uint256 subtractedValue) public override virtual returns (bool) {
-        _approveBase(_msgSender(), spender, _allowances[_msgSender()][spender].sub(subtractedValue, "ERC20: decreased allowance below zero"));
+        _approveBase(_msgSender(), spender, _tokenAllowances[_msgSender()][spender].sub(subtractedValue, "ERC20: decreased allowance below zero"));
         return true;
     }
     /**
@@ -232,21 +236,21 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
      * Returns a boolean value indicating whether the account is excluded from reward or not.
      *
      */
-    function isExcludedFromReward(address account) public view returns (bool) {
+    function isExcludedFromReward(address account) external view returns (bool) {
         return _isExcluded[account];
     }
 
     /**
      * @notice Get total Fees taken by taxes.     
      */
-    function totalFees() public view returns (uint256) {
+    function totalFees() external view returns (uint256) {
         return _tFeeTotal;
     }
 
     /**
     * @notice This function is to deliver tokens to account holders.
     */
-    function deliver(uint256 tAmount) public {
+    function deliver(uint256 tAmount) external {
         address sender = _msgSender();
         require(!_isExcluded[sender], "Excluded addresses cannot call this function");
         (uint256 rAmount,,,,,) = _getValues(tAmount);
@@ -258,7 +262,7 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
     /**    
      * @notice Getting reflection value from token value.     
      */
-    function reflectionFromToken(uint256 tAmount, bool deductTransferFee) public view returns(uint256) {
+    function reflectionFromToken(uint256 tAmount, bool deductTransferFee) external view returns(uint256) {
         require(tAmount <= _tTotal, "Amount must be less than supply");
         if (!deductTransferFee) {
             (uint256 rAmount,,,,,) = _getValues(tAmount);
@@ -284,7 +288,7 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
      * Must be called from only owner.
      *
      */
-    function excludeFromReward(address account) public onlyOwner whenNotPaused {
+    function excludeFromReward(address account) external onlyOwner whenNotPaused {
         // require(account != 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D, 'We can not exclude Uniswap router.');
         require(!_isExcluded[account], "Account is already excluded");
         if(_rOwned[account] > 0) {
@@ -319,7 +323,7 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
      * Must be called from only owner.
      *
      */
-    function excludeFromFee(address account) public onlyOwner whenNotPaused {
+    function excludeFromFee(address account) external onlyOwner whenNotPaused {
         _isExcludedFromFee[account] = true;
     }
     
@@ -329,7 +333,7 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
      * Must be called from only owner.
      *
      */
-    function includeInFee(address account) public onlyOwner {
+    function includeInFee(address account) external onlyOwner {
         _isExcludedFromFee[account] = false;
     }
     
@@ -351,9 +355,9 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
      * Must be called from only owner.
      *
      */
-    function setSwapAndLiquifyEnabled(bool _enabled) public onlyOwner whenNotPaused {
-        swapAndLiquifyEnabled = _enabled;
-        emit SwapAndLiquifyEnabledUpdated(_enabled);
+    function setSwapAndLiquifyEnabled(bool enabled) external onlyOwner whenNotPaused {
+        swapAndLiquifyEnabled = enabled;
+        emit SwapAndLiquifyEnabledUpdated(enabled);
     }
     
     /**
@@ -362,7 +366,7 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
      * Must be called from only owner.
      *
      */
-    function burn(address account, uint256 tAmount) public onlyOwner whenNotPaused {
+    function burn(address account, uint256 tAmount) external onlyOwner whenNotPaused {
         uint256 burnerBalance = balanceOf(account);
         require(burnerBalance >= tAmount, "Burnning amount is exceed balance");
         (uint256 rAmount, , , , , ) = _getValues(tAmount);
@@ -471,8 +475,8 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
     /**
     * @dev Internal function to calculate tax fee. Used 1000 instead of 100 for max percent to avoid decimals. For example, 7.5% will be calculated by 75/1000
     */
-    function calculateTaxFee(uint256 _amount) private view returns (uint256) {
-        return _amount.mul(taxFee).div(
+    function calculateTaxFee(uint256 amount) private view returns (uint256) {
+        return amount.mul(taxFee).div(
             10**3
         );
     }
@@ -480,8 +484,8 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
     /**
     * @dev Internal function to calculate liquidity fee. Used 1000 instead of 100 for max percent to avoid decimals. For example, 7.5% will be calculated by 75/1000
     */
-    function calculateLiquidityFee(uint256 _amount) private view returns (uint256) {
-        return _amount.mul(liquidityFee).div(
+    function calculateLiquidityFee(uint256 amount) private view returns (uint256) {
+        return amount.mul(liquidityFee).div(
             10**3
         );
     }
@@ -513,7 +517,7 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
     /**
     * @notice Checking whether the address is excluded from fee or not
     */
-    function isExcludedFromFee(address account) public view returns(bool) {
+    function isExcludedFromFee(address account) external view returns(bool) {
         return _isExcludedFromFee[account];
     }
 
@@ -521,12 +525,12 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
     * @dev Internal function to approve.
     * Emits a {Approval} event.
     */
-    function _approveBase(address owner, address spender, uint256 amount) private {
-        require(owner != address(0), "ERC20: approve from the zero address");
+    function _approveBase(address sender, address spender, uint256 amount) private {
+        require(sender != address(0), "ERC20: approve from the zero address");
         require(spender != address(0), "ERC20: approve to the zero address");
 
-        _allowances[owner][spender] = amount;
-        emit Approval(owner, spender, amount);
+        _tokenAllowances[sender][spender] = amount;
+        emit Approval(sender, spender, amount);
     }
 
     /**
@@ -546,28 +550,6 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
 
         uint256 senderBalance = balanceOf(from);
         require(senderBalance >= amount, "ERC20: transfer amount exceeds balance");
-        // is the token balance of this contract address over the min number of
-        // tokens that we need to initiate a swap + liquidity lock?
-        // also, don't get caught in a circular liquidity event.
-        // also, don't swap & liquify if sender is uniswap pair.
-        uint256 contractTokenBalance = balanceOf(address(this));
-        
-        if(contractTokenBalance >= maxTxAmount)
-        {
-            contractTokenBalance = maxTxAmount;
-        }
-        
-        bool overMinTokenBalance = contractTokenBalance >= numTokensSellToAddToLiquidity;
-        if (
-            overMinTokenBalance &&
-            !inSwapAndLiquify &&
-            from != uniswapV2Pair &&
-            swapAndLiquifyEnabled
-        ) {
-            contractTokenBalance = numTokensSellToAddToLiquidity;
-            //add liquidity
-            swapAndLiquify(contractTokenBalance);
-        }
         
         //indicates if fee should be deducted from transfer
         bool takeFee = true;
@@ -590,6 +572,29 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
 
         //it will calculate timelock
         _afterTokenTransferBase(from, to, amount);
+
+        // is the token balance of this contract address over the min number of
+        // tokens that we need to initiate a swap + liquidity lock?
+        // also, don't get caught in a circular liquidity event.
+        // also, don't swap & liquify if sender is uniswap pair.
+        uint256 contractTokenBalance = balanceOf(address(this));
+        
+        if(contractTokenBalance >= maxTxAmount)
+        {
+            contractTokenBalance = maxTxAmount;
+        }
+        
+        bool overMinTokenBalance = contractTokenBalance >= TOKEN_SELL_TO_LIQUIDITY;
+        if (
+            overMinTokenBalance &&
+            !inSwapAndLiquify &&
+            from != uniswapV2Pair &&
+            swapAndLiquifyEnabled
+        ) {
+            contractTokenBalance = TOKEN_SELL_TO_LIQUIDITY;
+            //add liquidity
+            swapAndLiquify(contractTokenBalance);
+        }
     }
 
     /**
@@ -616,7 +621,6 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
         // add liquidity to uniswap
         addLiquidity(otherHalf, newBalance);
         
-        emit SwapAndLiquify(half, newBalance, otherHalf);
     }
 
     /**
@@ -648,7 +652,7 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
         _approveBase(address(this), address(uniswapV2Router), tokenAmount);
 
         // add the liquidity
-        uniswapV2Router.addLiquidityETH{value: ethAmount}(
+        (uint token, uint eth, uint liquidity) = uniswapV2Router.addLiquidityETH{value: ethAmount}(
             address(this),
             tokenAmount,
             0, // slippage is unavoidable
@@ -656,6 +660,8 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
             owner(),
             block.timestamp
         );
+
+        emit SwapAndLiquify(token, eth, liquidity);
     }
 
     /**
@@ -733,14 +739,14 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
     /**
     * @notice getting the list of addresses set as applying timelock from. All tokens transfered from addresses of this list is time locked by proper logic.
     */ 
-    function getSwapAddresses() public view returns (address[] memory){
+    function getSwapAddresses() external view returns (address[] memory){
         return swapAddresses;
     }
 
     /**
     * @notice add swap address
     */ 
-    function addSwapAddress(address account) public onlyOwner whenNotPaused {
+    function addSwapAddress(address account) external onlyOwner whenNotPaused {
         require(!isSwapAddress[account], "Account is already in list of swap addresses");
         isSwapAddress[account] = true;        
         swapAddresses.push(account);
@@ -749,7 +755,7 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
     /**
     * @notice remove swap address
     */ 
-    function removeSwapAddress(address account) public onlyOwner whenNotPaused {
+    function removeSwapAddress(address account) external onlyOwner whenNotPaused {
         require(isSwapAddress[account] == true, "Account is not in list of swap addresses");
         for (uint256 i = 0; i < swapAddresses.length; i++) {
             if (swapAddresses[i] == account) {
