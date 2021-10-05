@@ -2,7 +2,7 @@ import { ethers, network } from 'hardhat';
 import { ContractFactory, Contract } from "ethers";
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
-import { convertTokenValue } from 'helper/tokenHelper';
+import { convertTokenValue } from '../helper/tokenHelper';
 
 describe("MisBlockBSC contract", function() {
     let Token : ContractFactory;
@@ -13,7 +13,7 @@ describe("MisBlockBSC contract", function() {
     let addr3 : SignerWithAddress;
     let addr4 : SignerWithAddress;
     let vestingC : SignerWithAddress;
-    const INITIAL_MINT = 500000000000;
+    const INITIAL_MINT = 1000000000000 * 75.5 / 100;
     beforeEach(async function (done) {
         this.timeout(100000);
         

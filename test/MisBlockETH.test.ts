@@ -2,7 +2,7 @@ import { ethers, network } from 'hardhat';
 import { ContractFactory, Contract } from "ethers";
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
-import { convertTokenValue } from 'helper/tokenHelper';
+import { convertTokenValue } from '../helper/tokenHelper';
 
 
 describe("MisBlockETH contract", function() {
@@ -14,10 +14,10 @@ describe("MisBlockETH contract", function() {
   let addr3 : SignerWithAddress;
   let addr4 : SignerWithAddress;
   let vestingC : SignerWithAddress;
-  const INITIAL_MINT = 500000000000;
+  const INITIAL_MINT = 1000000000000 * 24.5 / 100;
 
     beforeEach(async function () {        
-      this.timeout(50000);
+      this.timeout(100000);
       
       // Get the ContractFactory and Signers here.
       Token = await ethers.getContractFactory("MisBlockETH");
@@ -26,9 +26,7 @@ describe("MisBlockETH contract", function() {
       // To deploy our contract, we just have to call Token.deploy() and await
       // for it to be deployed(), which happens onces its transaction has been
       // mined.
-      const mintAmount = convertTokenValue(INITIAL_MINT);
-      hardhatToken = await Token.deploy([mintAmount]);
-      hardhatToken = await Token.deploy();
+      hardhatToken = await Token.deploy(convertTokenValue(INITIAL_MINT));
       await hardhatToken.deployed();    
     });
 
