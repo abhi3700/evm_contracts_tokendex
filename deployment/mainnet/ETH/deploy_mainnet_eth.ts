@@ -14,7 +14,7 @@ async function main() {
   
     const Token = await ethers.getContractFactory("MisBlockETH");
     const INITIAL_MINT = 1000000000000;
-    const mintAmount = convertTokenValue(Number(INITIAL_MINT * 75.5 / 100));
+    const mintAmount = convertTokenValue(Number(INITIAL_MINT * 24.5 / 100));
     console.log("mint amount:", mintAmount.toString());
     const token = await Token.deploy(mintAmount);
     await token.deployed();
