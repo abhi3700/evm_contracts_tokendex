@@ -2,10 +2,8 @@ import { ethers, network } from 'hardhat';
 import { ContractFactory, Contract } from "ethers";
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
+import { convertTokenValue } from '../helper/tokenHelper';
 
-function convertTokenValue(token: number) {
-    return ethers.BigNumber.from(10).pow(18).mul(token);
-}
 
 describe("MisBlockETH contract", function() {
   let Token : ContractFactory;
@@ -16,9 +14,10 @@ describe("MisBlockETH contract", function() {
   let addr3 : SignerWithAddress;
   let addr4 : SignerWithAddress;
   let vestingC : SignerWithAddress;
-  
+  const INITIAL_MINT = 1000000000000 * 24.5 / 100;
+
     beforeEach(async function () {        
-      this.timeout(50000);
+      this.timeout(100000);
       
       // Get the ContractFactory and Signers here.
       Token = await ethers.getContractFactory("MisBlockETH");
@@ -27,14 +26,14 @@ describe("MisBlockETH contract", function() {
       // To deploy our contract, we just have to call Token.deploy() and await
       // for it to be deployed(), which happens onces its transaction has been
       // mined.
-      hardhatToken = await Token.deploy();
+      hardhatToken = await Token.deploy(convertTokenValue(INITIAL_MINT));
       await hardhatToken.deployed();    
     });
 
     describe("Deployment", function () {
       it("Should assign the total supply of tokens to the owner and it should be 1T", async function () {
         const ownerBalance = await hardhatToken.balanceOf(owner.address);
-        expect(await hardhatToken.totalSupply()).to.equal(ownerBalance).to.equal(convertTokenValue(1000000000000));
+        expect(await hardhatToken.totalSupply()).to.equal(ownerBalance).to.equal(convertTokenValue(INITIAL_MINT));
       });
       it("Should push uniswap router into swapaddresses", async function () {
         const expectedSwapAddresses = ['0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D'];
@@ -46,7 +45,7 @@ describe("MisBlockETH contract", function() {
     describe("Mint", function() {
       it("Should mint 100 of tokens to the addr1", async function () {
         await hardhatToken.mint(addr1.address, convertTokenValue(100));
-        expect(await hardhatToken.totalSupply()).to.equal(convertTokenValue(1000000000000 + 100));
+        expect(await hardhatToken.totalSupply()).to.equal(convertTokenValue(INITIAL_MINT + 100));
         expect(await hardhatToken.balanceOf(addr1.address)).to.equal(convertTokenValue(100));
       });
 
@@ -414,17 +413,11 @@ describe("MisBlockETH contract", function() {
 
     describe("Add Swap Liquidity", function () {
       it("Should trigger swapAndLiquify and reverted with INSUFFICIENT_LIQUIDITY when token contract have 500000+ tokens", async function () {
-        // send 500000 token to token contract address from owner
-        await hardhatToken.transfer(hardhatToken.address, convertTokenValue(500000));
-        
-        await expect(hardhatToken.transfer(addr1.address, convertTokenValue(100))).to.be.revertedWith("UniswapV2Library: INSUFFICIENT_LIQUIDITY");
+        await expect(hardhatToken.transfer(hardhatToken.address, convertTokenValue(500000))).to.be.revertedWith("UniswapV2Library: INSUFFICIENT_LIQUIDITY");
       });
 
       it("Should not trigger swapAndLiquify when token contract have less than 500000 tokens", async function () {
-        // send 500000 token to token contract address from owner
-        await hardhatToken.transfer(hardhatToken.address, convertTokenValue(400000));
-        
-        await expect(hardhatToken.transfer(addr1.address, convertTokenValue(100))).to.emit(hardhatToken, 'Transfer');
+        await expect(hardhatToken.transfer(hardhatToken.address, convertTokenValue(400000))).to.emit(hardhatToken, 'Transfer');
       });
     });
 });

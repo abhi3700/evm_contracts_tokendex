@@ -136,3 +136,6 @@ package-lock.json
 
 # temp files
 todo
+
+# python virtual env
+venv/

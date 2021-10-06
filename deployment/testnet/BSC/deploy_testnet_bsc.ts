@@ -1,4 +1,5 @@
 import { ethers } from 'hardhat';
+import { convertTokenValue } from '../../../helper/tokenHelper';
 
 async function main() {
     
@@ -12,7 +13,10 @@ async function main() {
     console.log("Account balance:", (await deployer.getBalance()).toString());
   
     const Token = await ethers.getContractFactory("MisBlockBSC");
-    const token = await Token.deploy();
+    const INITIAL_MINT = 1000000000000;
+    const mintAmount = convertTokenValue(Number(INITIAL_MINT * 75.5 / 100));
+    console.log("mint amount:", mintAmount.toString());
+    const token = await Token.deploy(mintAmount);
     await token.deployed();
   
     console.log("Token address:", token.address);
