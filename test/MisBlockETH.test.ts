@@ -26,7 +26,7 @@ describe("MisBlockETH contract", function() {
       // To deploy our contract, we just have to call Token.deploy() and await
       // for it to be deployed(), which happens onces its transaction has been
       // mined.
-      hardhatToken = await Token.deploy(convertTokenValue(INITIAL_MINT));
+      hardhatToken = await Token.deploy(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D, convertTokenValue(INITIAL_MINT));
       await hardhatToken.deployed();    
     });
 

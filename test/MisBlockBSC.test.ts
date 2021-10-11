@@ -24,7 +24,7 @@ describe("MisBlockBSC contract", function() {
         // To deploy our contract, we just have to call Token.deploy() and await
         // for it to be deployed(), which happens onces its transaction has been
         // mined.
-        hardhatToken = await Token.deploy(convertTokenValue(INITIAL_MINT));
+        hardhatToken = await Token.deploy('0x10ED43C718714eb63d5aA57B78B54704E256024E', convertTokenValue(INITIAL_MINT));
         await hardhatToken.deployed();    
     });
 

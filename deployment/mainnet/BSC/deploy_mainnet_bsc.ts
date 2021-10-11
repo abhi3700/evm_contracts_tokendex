@@ -16,7 +16,7 @@ async function main() {
     const INITIAL_MINT = 1000000000000;
     const mintAmount = convertTokenValue(Number(INITIAL_MINT * 75.5 / 100));
     console.log("mint amount:", mintAmount.toString());
-    const token = await Token.deploy(mintAmount);
+    const token = await Token.deploy('0x10ED43C718714eb63d5aA57B78B54704E256024E', mintAmount);
     await token.deployed();
   
     console.log("Token address:", token.address);

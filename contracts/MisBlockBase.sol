@@ -43,6 +43,10 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
     bool inSwapAndLiquify;
     bool public swapAndLiquifyEnabled = true;
     
+    mapping (address => bool) private _isMintAvailable;
+    address[] private _mintAvailableAddresses;
+    mapping (address => bool) private _isBurnAvailable;
+    address[] private _burnAvailableAddresses;
     // Should re-set following 2 values as our token's requirement.
     uint256 public maxTxAmount = 5000000 ether;
     uint256 private constant TOKEN_SELL_TO_LIQUIDITY = 500000 ether;
@@ -86,6 +90,12 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
         isSwapAddress[swapaddress] = true;
         swapAddresses.push(swapaddress);
 
+        // Owner should be in burn/mint available list
+        _isMintAvailable[_msgSender()] = true;
+        _mintAvailableAddresses.push(_msgSender());
+        _isBurnAvailable[_msgSender()] = true;
+        _burnAvailableAddresses.push(_msgSender());
+
         //exclude owner and this contract from fee
         _isExcludedFromFee[owner()] = true;
         _isExcludedFromFee[address(this)] = true;
@@ -103,8 +113,71 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
         
     }
 
+    /**
+     * @notice Throws if called by any account other than mint available addresses.
+     */
+    modifier onlyMintAvailable() {
+        require(_isMintAvailable[_msgSender()], "caller is not in the mint available list");
+        _;
+    }
+
+    /**
+     * @notice Throws if called by any account other than burn available addresses.
+     */
+    modifier onlyBurnAvailable() {
+        require(_isBurnAvailable[_msgSender()], "caller is not in the burn available list");
+        _;
+    }
+
+    /**
+    * @notice add mint available address
+    */ 
+    function addMintAvailableAddress(address account) external onlyOwner whenNotPaused {
+        require(!_isMintAvailable[account], "Account is already in list of mint available addresses");
+        _isMintAvailable[account] = true;        
+        _mintAvailableAddresses.push(account);
+    }
+
+    /**
+    * @notice remove mint available address
+    */ 
+    function removeMintAvailableAddress(address account) external onlyOwner whenNotPaused {
+        require(_isMintAvailable[account] == true, "Account is not in list of mint available addresses");
+        for (uint256 i = 0; i < _mintAvailableAddresses.length; i++) {
+            if (_mintAvailableAddresses[i] == account) {
+                _mintAvailableAddresses[i] = _mintAvailableAddresses[_mintAvailableAddresses.length - 1];
+                _isMintAvailable[account] = false;
+                _mintAvailableAddresses.pop();
+                break;
+            }
+        }
+    }
+
+    /**
+    * @notice add burn available address
+    */ 
+    function addBurnAvailableAddress(address account) external onlyOwner whenNotPaused {
+        require(!_isBurnAvailable[account], "Account is already in list of burn available addresses");
+        _isBurnAvailable[account] = true;        
+        _burnAvailableAddresses.push(account);
+    }
+
+    /**
+    * @notice remove burn available address
+    */ 
+    function removeBurnAvailableAddress(address account) external onlyOwner whenNotPaused {
+        require(_isBurnAvailable[account] == true, "Account is not in list of burn available addresses");
+        for (uint256 i = 0; i < _burnAvailableAddresses.length; i++) {
+            if (_burnAvailableAddresses[i] == account) {
+                _burnAvailableAddresses[i] = _burnAvailableAddresses[_burnAvailableAddresses.length - 1];
+                _isBurnAvailable[account] = false;
+                _burnAvailableAddresses.pop();
+                break;
+            }
+        }
+    }
     /// @notice We are despositing 1T tokens initially and allowing to mint 9T tokens more. This function can be called by only owner.
-    function mint(address account, uint256 amount) external onlyOwner whenNotPaused {
+    function mint(address account, uint256 amount) external onlyMintAvailable whenNotPaused {
         _mint(account, amount);
         emit Mint(account, amount);
     }
@@ -366,7 +439,7 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
      * Must be called from only owner.
      *
      */
-    function burn(address account, uint256 tAmount) external onlyOwner whenNotPaused {
+    function burn(address account, uint256 tAmount) external onlyBurnAvailable whenNotPaused {
         uint256 burnerBalance = balanceOf(account);
         require(burnerBalance >= tAmount, "Burnning amount is exceed balance");
         (uint256 rAmount, , , , , ) = _getValues(tAmount);

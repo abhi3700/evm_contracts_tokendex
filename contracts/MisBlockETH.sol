@@ -9,7 +9,7 @@ pragma solidity ^0.8.0;
 import "./MisBlockBase.sol";
 
 contract MisBlockETH is MisBlockBase {
-    constructor(uint256 initialMintAmount) MisBlockBase(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D, initialMintAmount) {
+    constructor(address swapRouterAddress, uint256 initialMintAmount) MisBlockBase(swapRouterAddress, initialMintAmount) {
         
     }
 }
