@@ -25,6 +25,8 @@ async function main() {
     
     await tokenBsccontract.addMintAvailableAddress(token.address);
     await tokenBsccontract.addBurnAvailableAddress(token.address);
+
+    console.log("Successfully Deployed");
   }
   
   main()
