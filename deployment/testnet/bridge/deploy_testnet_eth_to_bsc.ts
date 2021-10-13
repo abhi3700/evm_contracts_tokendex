@@ -1,5 +1,6 @@
 import { ethers } from 'hardhat';
 import { convertTokenValue } from '../../../helper/tokenHelper';
+import MisBlockETHABI from '../../../constants/abi/MisBlockETH.json';
 
 async function main() {
     
@@ -12,14 +13,20 @@ async function main() {
   
     console.log("Account balance:", (await deployer.getBalance()).toString());
   
-    const Token = await ethers.getContractFactory("MisBlockBSC");
-    const INITIAL_MINT = 1000000000000;
-    const mintAmount = convertTokenValue(Number(INITIAL_MINT * 75.5 / 100));
-    console.log("mint amount:", mintAmount.toString());
-    const token = await Token.deploy('0xD99D1c33F9fC3444f8101754aBC46c52416550D1', mintAmount);
+    const tokenEthAddress = "0xE0a3280F68051320E5f7d892e678C1A63a797D71";
+
+    const Token = await ethers.getContractFactory("BridgeEth");
+    const token = await Token.deploy(tokenEthAddress);
     await token.deployed();
   
     console.log("Token address:", token.address);
+
+    const tokenEthcontract = new ethers.Contract(tokenEthAddress, MisBlockETHABI, deployer);
+    
+    await tokenEthcontract.addMintAvailableAddress(token.address);
+    await tokenEthcontract.addBurnAvailableAddress(token.address);
+
+    console.log("Successfully Deployed");
   }
   
   main()
