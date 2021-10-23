@@ -1,17 +1,25 @@
-import * as dotenv from "dotenv";
+import { task } from "hardhat/config";
+
+import { config as dotenvConfig } from "dotenv";
+import { resolve } from "path";
+dotenvConfig({ path: resolve(__dirname, "./.env") });
+
+import { HardhatUserConfig } from "hardhat/types";
+import { NetworkUserConfig } from "hardhat/types";
+
+import "@nomiclabs/hardhat-waffle";
+import "@typechain/hardhat";
 import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-waffle";
-import "hardhat-gas-reporter";
 
-dotenv.config();
-/**
- * @type import('hardhat/config').HardhatUserConfig
- */
+import "hardhat-gas-reporter";
+import "@nomiclabs/hardhat-etherscan";
+
 const INFURA_API_KEY = process.env.INFURA_API_KEY || "";
 const SPEEDY_NODE_KEY = process.env.SPEEDY_NODE_KEY || "";
 const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY || "";
 
-module.exports = {
+const config: HardhatUserConfig = {  
   defaultNetwork: "hardhat",
   networks: {
     hardhat: {
@@ -47,6 +55,22 @@ module.exports = {
     }
   },
   gasReporter: {
+    currency: 'Gwei',
+    gasPrice: 90,
     enabled: (process.env.REPORT_GAS) ? true : false
-  }
+  },
+  paths: {
+    sources: "contracts",
+    artifacts: "./build/artifacts",
+    cache: "./build/cache",
+  },
+  // etherscan: {
+  //   apiKey: ETHERSCAN_API_KEY,
+  // },
+  typechain: {
+    outDir: "./build/typechain/",
+    target: "ethers-v5",
+  },
 };
+
+export default config;

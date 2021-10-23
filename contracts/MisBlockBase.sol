@@ -850,7 +850,7 @@ contract MisBlockBase is ERC20, Pausable, Ownable {
     function _beforeTokenTransferBase(
         address from,
         uint256 amount
-    ) private {
+    ) private view {
         LockFund[] storage lockFunds = _lockFundsArray[from];
         if(lockFunds.length < 1) return;
         uint256 lockedFundsSum = 0;

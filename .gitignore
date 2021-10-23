@@ -139,3 +139,6 @@ todo
 
 # python virtual env
 venv/
+
+typechain/
+build/
